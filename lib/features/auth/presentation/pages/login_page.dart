@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'presentation/viewmodel/login_view_model.dart';
+import 'package:dopply_app/features/auth/presentation/viewmodel/login_view_model.dart';
 
 final loginStatusProvider = StateProvider<String?>((ref) => null);
 
@@ -49,34 +49,39 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             SizedBox(height: 16),
             if (vm.isLoading) CircularProgressIndicator(),
-            if (vm.error != null) Text(vm.error!, style: TextStyle(color: Colors.red)),
+            if (vm.error != null)
+              Text(vm.error!, style: TextStyle(color: Colors.red)),
             ElevatedButton(
-              onPressed: vm.isLoading
-                  ? null
-                  : () async {
-                      if (emailController.text.isEmpty || passwordController.text.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Email and password required')),
-                        );
-                        return;
-                      }
-                      final role = await ref
-                          .read(loginViewModelProvider.notifier)
-                          .login(
-                            emailController.text,
-                            passwordController.text,
+              onPressed:
+                  vm.isLoading
+                      ? null
+                      : () async {
+                        if (emailController.text.isEmpty ||
+                            passwordController.text.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Email and password required'),
+                            ),
                           );
-                      if (role != null) {
-                        ref.read(loginStatusProvider.notifier).state = role;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Login Success!')),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(vm.error ?? 'Login failed')),
-                        );
-                      }
-                    },
+                          return;
+                        }
+                        final role = await ref
+                            .read(loginViewModelProvider.notifier)
+                            .login(
+                              emailController.text,
+                              passwordController.text,
+                            );
+                        if (role != null) {
+                          ref.read(loginStatusProvider.notifier).state = role;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Login Success!')),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(vm.error ?? 'Login failed')),
+                          );
+                        }
+                      },
               child: Text('Login'),
             ),
           ],

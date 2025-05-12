@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../auth/login_page.dart'; // Import loginStatusProvider
+import 'package:dopply_app/features/auth/presentation/pages/login_page.dart'; // Import loginStatusProvider
 
 class AdminDashboard extends ConsumerWidget {
   const AdminDashboard({Key? key}) : super(key: key);
