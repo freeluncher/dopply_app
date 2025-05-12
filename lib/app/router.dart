@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/presentation/pages/login_page.dart';
 import '../features/admin/presentation/pages/admin_dashboard.dart';
 import '../features/auth/presentation/pages/register_page.dart';
+import '../features/auth/presentation/pages/splash_screen.dart';
 // import '../features/doctor/presentation/pages/doctor_dashboard.dart';
 // import '../features/patient/presentation/pages/patient_dashboard.dart';
 // import fitur lain sesuai kebutuhan...
@@ -14,12 +15,12 @@ import '../core/services/auth_guard_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     routes: [
       GoRoute(
         path: '/',
-        name: 'home',
-        builder: (context, state) => LoginPage(),
+        name: 'splash',
+        builder: (context, state) => const SplashScreen(),
       ),
       GoRoute(
         path: '/login',

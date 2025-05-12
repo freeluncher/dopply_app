@@ -4,15 +4,24 @@ import 'package:dopply_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/user.dart';
+import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
 
 // Provider untuk AuthRemoteDataSource
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>(
   (ref) => AuthRemoteDataSourceImpl(),
 );
 
+// Provider untuk AuthLocalDataSource
+final authLocalDataSourceProvider = Provider<AuthLocalDataSource>(
+  (ref) => AuthLocalDataSource(),
+);
+
 // Provider untuk AuthRepository
 final authRepositoryProvider = Provider<AuthRepositoryImpl>(
-  (ref) => AuthRepositoryImpl(ref.read(authRemoteDataSourceProvider)),
+  (ref) => AuthRepositoryImpl(
+    ref.read(authRemoteDataSourceProvider),
+    ref.read(authLocalDataSourceProvider),
+  ),
 );
 
 // Provider untuk LoginUseCase
@@ -37,13 +46,12 @@ class LoginViewModel extends ChangeNotifier {
     error = null;
     notifyListeners();
 
-    final result = await _loginUseCase.execute(email, password);
+    final user = await _loginUseCase.execute(email, password);
     isLoading = false;
-    if (result != null) {
+    if (user != null) {
       error = null;
       notifyListeners();
-      // Anggap result adalah role, buat User dummy (bisa diubah sesuai backend)
-      return User(id: email, email: email, role: result);
+      return user;
     } else {
       error = 'Invalid credentials';
       notifyListeners();

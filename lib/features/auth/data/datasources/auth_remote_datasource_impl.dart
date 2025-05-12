@@ -2,13 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 abstract class AuthRemoteDataSource {
-  Future<String?> login(String email, String password);
+  Future<Map<String, dynamic>?> login(String email, String password);
   Future<String?> register(String name, String email, String password);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
-  Future<String?> login(String email, String password) async {
+  Future<Map<String, dynamic>?> login(String email, String password) async {
     final url = Uri.parse('https://dopply.my.id/api/v1/login');
     final response = await http.post(
       url,
@@ -16,8 +16,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       body: jsonEncode({'email': email, 'password': password}),
     );
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['role'];
+      return jsonDecode(response.body);
     }
     return null;
   }
