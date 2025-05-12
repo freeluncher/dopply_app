@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dopply_app/features/auth/presentation/viewmodels/login_view_model.dart';
+import '../viewmodels/user_provider.dart';
+import '../../domain/entities/user.dart';
 
 final loginStatusProvider = StateProvider<String?>((ref) => null);
 
@@ -18,13 +20,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<String?>(loginStatusProvider, (previous, next) {
+    ref.listen<User?>(userProvider, (previous, next) {
       if (previous != next && next != null) {
-        if (next == 'admin') {
+        if (next.role == 'admin') {
           context.go('/adminDashboard');
-        } else if (next == 'doctor') {
+        } else if (next.role == 'doctor') {
           context.go('/doctorDashboard');
-        } else if (next == 'patient') {
+        } else if (next.role == 'patient') {
           context.go('/patientDashboard');
         }
       }
@@ -65,14 +67,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                           );
                           return;
                         }
-                        final role = await ref
+                        final user = await ref
                             .read(loginViewModelProvider.notifier)
                             .login(
                               emailController.text,
                               passwordController.text,
                             );
-                        if (role != null) {
-                          ref.read(loginStatusProvider.notifier).state = role;
+                        if (user != null) {
+                          ref.read(userProvider.notifier).state = user;
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Login Success!')),
                           );

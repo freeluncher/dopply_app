@@ -3,6 +3,7 @@ import 'package:dopply_app/features/auth/data/repositories/auth_repository_impl.
 import 'package:dopply_app/features/auth/domain/usecases/login_usecase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../domain/entities/user.dart';
 
 // Provider untuk AuthRemoteDataSource
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>(
@@ -31,7 +32,7 @@ class LoginViewModel extends ChangeNotifier {
 
   LoginViewModel(this._loginUseCase);
 
-  Future<String?> login(String email, String password) async {
+  Future<User?> login(String email, String password) async {
     isLoading = true;
     error = null;
     notifyListeners();
@@ -41,7 +42,8 @@ class LoginViewModel extends ChangeNotifier {
     if (result != null) {
       error = null;
       notifyListeners();
-      return result;
+      // Anggap result adalah role, buat User dummy (bisa diubah sesuai backend)
+      return User(id: email, email: email, role: result);
     } else {
       error = 'Invalid credentials';
       notifyListeners();

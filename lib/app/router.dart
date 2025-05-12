@@ -8,6 +8,8 @@ import '../features/admin/presentation/pages/admin_dashboard.dart';
 // import '../features/doctor/presentation/pages/doctor_dashboard.dart';
 // import '../features/patient/presentation/pages/patient_dashboard.dart';
 // import fitur lain sesuai kebutuhan...
+import '../features/auth/presentation/viewmodels/user_provider.dart';
+import '../core/services/auth_guard_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -56,7 +58,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 Scaffold(body: Center(child: Text('Pengaturan Admin'))),
       ),
     ],
-    // Redirect dan error handling bisa ditambahkan di sini
+    redirect: (context, state) {
+      final user = ref.read(userProvider);
+      return AuthGuardService.canAccess(state, user);
+    },
   );
 });
 
