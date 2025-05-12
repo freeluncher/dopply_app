@@ -30,14 +30,7 @@ class DoctorDashboard extends StatelessWidget {
                 context.push('/doctor/monitoring');
               },
             ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.person_add),
-              label: const Text('Tambah Pasien'),
-              onPressed: () {
-                context.push('/doctor/add-patient');
-              },
-            ),
+
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.history),
