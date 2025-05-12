@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dopply_app/features/auth/presentation/viewmodel/login_view_model.dart';
+import 'package:dopply_app/features/auth/presentation/viewmodels/login_view_model.dart';
 
 final loginStatusProvider = StateProvider<String?>((ref) => null);
 
