@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'presentation/viewmodel/login_view_model.dart';
 
 final loginStatusProvider = StateProvider<String?>((ref) => null);
@@ -16,22 +17,19 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    // Listen to login status changes for navigation
+  Widget build(BuildContext context) {
     ref.listen<String?>(loginStatusProvider, (previous, next) {
-      if (next == 'admin') {
-        Navigator.pushReplacementNamed(context, '/adminDashboard');
-      } else if (next == 'doctor') {
-        Navigator.pushReplacementNamed(context, '/doctorDashboard');
-      } else if (next == 'patient') {
-        Navigator.pushReplacementNamed(context, '/patientDashboard');
+      if (previous != next && next != null) {
+        if (next == 'admin') {
+          context.go('/adminDashboard');
+        } else if (next == 'doctor') {
+          context.go('/doctorDashboard');
+        } else if (next == 'patient') {
+          context.go('/patientDashboard');
+        }
       }
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
     final vm = ref.watch(loginViewModelProvider);
 
     return Scaffold(
@@ -56,6 +54,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               onPressed: vm.isLoading
                   ? null
                   : () async {
+                      if (emailController.text.isEmpty || passwordController.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Email and password required')),
+                        );
+                        return;
+                      }
                       final role = await ref
                           .read(loginViewModelProvider.notifier)
                           .login(
