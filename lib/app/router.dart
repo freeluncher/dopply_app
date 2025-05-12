@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 // Import halaman-halaman utama
 import '../features/auth/presentation/pages/login_page.dart';
 import '../features/admin/presentation/pages/admin_dashboard.dart';
+import '../features/auth/presentation/pages/register_page.dart';
 // import '../features/doctor/presentation/pages/doctor_dashboard.dart';
 // import '../features/patient/presentation/pages/patient_dashboard.dart';
 // import fitur lain sesuai kebutuhan...
@@ -16,6 +17,11 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/login',
     routes: [
       GoRoute(
+        path: '/',
+        name: 'home',
+        builder: (context, state) => LoginPage(),
+      ),
+      GoRoute(
         path: '/login',
         name: 'login',
         builder: (context, state) => LoginPage(),
@@ -24,6 +30,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/adminDashboard',
         name: 'adminDashboard',
         builder: (context, state) => const AdminDashboard(),
+      ),
+      GoRoute(
+        path: '/register',
+        name: 'register',
+        builder: (context, state) => const RegisterPage(),
       ),
       // GoRoute(
       //   path: '/doctorDashboard',

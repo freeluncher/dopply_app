@@ -86,6 +86,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       },
               child: Text('Login'),
             ),
+            TextButton(
+              onPressed: () {
+                context.go('/register');
+              },
+              child: const Text('Belum punya akun? Daftar'),
+            ),
           ],
         ),
       ),

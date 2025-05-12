@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 
 abstract class AuthRemoteDataSource {
   Future<String?> login(String email, String password);
+  Future<String?> register(String name, String email, String password);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -17,6 +18,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       return data['role'];
+    }
+    return null;
+  }
+
+  @override
+  Future<String?> register(String name, String email, String password) async {
+    final url = Uri.parse('https://dopply.my.id/api/v1/register');
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'name': name, 'email': email, 'password': password}),
+    );
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['role'] ?? 'success';
     }
     return null;
   }
