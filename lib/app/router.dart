@@ -7,8 +7,8 @@ import '../features/auth/presentation/pages/login_page.dart';
 import '../features/admin/presentation/pages/admin_dashboard.dart';
 import '../features/auth/presentation/pages/register_page.dart';
 import '../features/auth/presentation/pages/splash_screen.dart';
-// import '../features/doctor/presentation/pages/doctor_dashboard.dart';
-// import '../features/patient/presentation/pages/patient_dashboard.dart';
+import '../features/doctor/presentation/pages/doctor_dashboard.dart';
+import '../features/patient/presentation/pages/patient_dashboard.dart';
 // import fitur lain sesuai kebutuhan...
 import '../features/auth/presentation/viewmodels/user_provider.dart';
 import '../core/services/auth_guard_service.dart';
@@ -37,11 +37,65 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: 'register',
         builder: (context, state) => const RegisterPage(),
       ),
-      // GoRoute(
-      //   path: '/doctorDashboard',
-      //   name: 'doctorDashboard',
-      //   builder: (context, state) => const DoctorDashboard(),
-      // ),
+      GoRoute(
+        path: '/doctorDashboard',
+        name: 'doctorDashboard',
+        builder: (context, state) => const DoctorDashboard(),
+      ),
+      GoRoute(
+        path: '/doctor/monitoring',
+        builder:
+            (context, state) => Scaffold(
+              body: Center(child: Text('Monitoring Detak Jantung Janin')),
+            ),
+      ),
+      GoRoute(
+        path: '/doctor/add-patient',
+        builder:
+            (context, state) =>
+                Scaffold(body: Center(child: Text('Tambah Pasien'))),
+      ),
+      GoRoute(
+        path: '/doctor/patient-history',
+        builder:
+            (context, state) =>
+                Scaffold(body: Center(child: Text('Riwayat Pasien'))),
+      ),
+      GoRoute(
+        path: '/doctor/new-patients',
+        builder:
+            (context, state) =>
+                Scaffold(body: Center(child: Text('Pasien Terbaru'))),
+      ),
+      GoRoute(
+        path: '/doctor/account-settings',
+        builder:
+            (context, state) =>
+                Scaffold(body: Center(child: Text('Account Settings'))),
+      ),
+      GoRoute(
+        path: '/patientDashboard',
+        name: 'patientDashboard',
+        builder: (context, state) => const PatientDashboard(),
+      ),
+      GoRoute(
+        path: '/patient/self-monitoring',
+        builder:
+            (context, state) =>
+                Scaffold(body: Center(child: Text('Monitoring Mandiri'))),
+      ),
+      GoRoute(
+        path: '/patient/history',
+        builder:
+            (context, state) =>
+                Scaffold(body: Center(child: Text('Riwayat Pemeriksaan'))),
+      ),
+      GoRoute(
+        path: '/patient/account-settings',
+        builder:
+            (context, state) =>
+                Scaffold(body: Center(child: Text('Account Settings'))),
+      ),
       // GoRoute(
       //   path: '/patientDashboard',
       //   name: 'patientDashboard',
