@@ -52,7 +52,7 @@ class DoctorDashboard extends StatelessWidget {
               icon: const Icon(Icons.settings),
               label: const Text('Account Settings'),
               onPressed: () {
-                context.push('/doctor/account-settings');
+                context.push('/account-settings');
               },
             ),
             // Tambahkan menu lain sesuai kebutuhan

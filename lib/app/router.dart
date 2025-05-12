@@ -10,6 +10,9 @@ import '../features/auth/presentation/pages/splash_screen.dart';
 import '../features/doctor/presentation/pages/doctor_dashboard.dart';
 import '../features/patient/presentation/pages/patient_dashboard.dart';
 import '../features/doctor/presentation/pages/monitoring_page.dart';
+import '../features/doctor/presentation/pages/patient_history_page.dart';
+import '../features/doctor/presentation/pages/patient_history_detail_page.dart';
+import '../features/auth/presentation/pages/account_settings_page.dart';
 // import fitur lain sesuai kebutuhan...
 import '../features/auth/presentation/viewmodels/user_provider.dart';
 import '../core/services/auth_guard_service.dart';
@@ -55,9 +58,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/doctor/patient-history',
-        builder:
-            (context, state) =>
-                Scaffold(body: Center(child: Text('Riwayat Pasien'))),
+        builder: (context, state) => const PatientHistoryPage(),
+      ),
+      GoRoute(
+        path: '/doctor/patient-history/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id'] ?? '';
+          final name =
+              state.extra is Map ? (state.extra as Map)['name'] ?? '' : '';
+          final summary =
+              state.extra is Map ? (state.extra as Map)['summary'] ?? '' : '';
+          return PatientHistoryDetailPage(id: id, name: name, summary: summary);
+        },
       ),
       GoRoute(
         path: '/doctor/new-patients',
@@ -93,6 +105,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder:
             (context, state) =>
                 Scaffold(body: Center(child: Text('Account Settings'))),
+      ),
+      GoRoute(
+        path: '/account-settings',
+        builder: (context, state) => const AccountSettingsPage(),
       ),
       // GoRoute(
       //   path: '/patientDashboard',

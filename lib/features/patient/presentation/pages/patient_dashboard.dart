@@ -43,7 +43,7 @@ class PatientDashboard extends StatelessWidget {
               icon: const Icon(Icons.settings),
               label: const Text('Account Settings'),
               onPressed: () {
-                context.push('/patient/account-settings');
+                context.push('/account-settings');
               },
             ),
             // Tambahkan menu lain sesuai kebutuhan

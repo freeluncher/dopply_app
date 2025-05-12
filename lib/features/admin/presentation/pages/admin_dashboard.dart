@@ -48,6 +48,14 @@ class AdminDashboard extends ConsumerWidget {
                 context.push('/admin/settings');
               },
             ),
+            SizedBox(height: 16),
+            ElevatedButton.icon(
+              icon: Icon(Icons.settings),
+              label: Text('Account Settings'),
+              onPressed: () {
+                context.push('/account-settings');
+              },
+            ),
             // ...tambahkan menu lain sesuai kebutuhan...
           ],
         ),
