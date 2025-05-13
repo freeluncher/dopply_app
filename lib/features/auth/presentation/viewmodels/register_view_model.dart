@@ -27,12 +27,17 @@ class RegisterViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> register(String name, String email, String password) async {
+  Future<String?> register(
+    String name,
+    String email,
+    String password,
+    String role,
+  ) async {
     isLoading = true;
     error = null;
     success = null;
     notifyListeners();
-    final result = await _registerUseCase.execute(name, email, password);
+    final result = await _registerUseCase.execute(name, email, password, role);
     isLoading = false;
     if (result != null) {
       success = 'Register Success!';

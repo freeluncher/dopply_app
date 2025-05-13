@@ -1,99 +1,162 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../viewmodels/monitoring_view_model.dart';
 
-class MonitoringPage extends StatefulWidget {
+class MonitoringPage extends ConsumerWidget {
   const MonitoringPage({Key? key}) : super(key: key);
 
   @override
-  State<MonitoringPage> createState() => _MonitoringPageState();
-}
-
-class _MonitoringPageState extends State<MonitoringPage> {
-  // Dummy data, ganti dengan provider/stream dari ESP32
-  int bpm = 120;
-  String selectedPatient = 'Belum ada pasien dipilih';
-
-  // Simulasi update BPM (ganti dengan stream dari ESP32 di implementasi nyata)
-  @override
-  void initState() {
-    super.initState();
-    // Simulasi BPM update
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      setState(() {
-        bpm = 110 + (bpm + 1) % 30;
-      });
-      return mounted;
-    });
-  }
-
-  void _selectPatient() async {
-    // TODO: Implementasi pilih/tambah pasien
-    setState(() {
-      selectedPatient = 'Pasien: Siti Aminah, 27th, G2P1';
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(monitoringViewModelProvider);
+    final appBarHeight = kToolbarHeight;
     return Scaffold(
       appBar: AppBar(title: const Text('Monitoring Detak Jantung Janin')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            ElevatedButton.icon(
-              icon: const Icon(Icons.person_search),
-              label: const Text('Pilih/Tambah Pasien'),
-              onPressed: _selectPatient,
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      selectedPatient,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text('Data singkat: ...'),
-                  ],
+      body: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: MediaQuery.of(context).size.height - appBarHeight - 32,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.person_search),
+                  label: const Text('Pilih/Tambah Pasien'),
+                  onPressed:
+                      vm.isMonitoring
+                          ? null
+                          : () => vm.selectPatient(
+                            'Pasien: Siti Aminah, 27th, G2P1',
+                          ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'BPM Detak Jantung Janin',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                '$bpm',
-                style: const TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Center(
-                    child: Text(
-                      'Grafik BPM (implementasi: gunakan package chart_flutter atau fl_chart)',
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          vm.selectedPatient,
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('Data singkat: ...'),
+                      ],
                     ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: Icon(vm.isConnected ? Icons.usb_off : Icons.usb),
+                        label: Text(
+                          vm.isConnected ? 'Disconnect ESP32' : 'Connect ESP32',
+                        ),
+                        onPressed:
+                            vm.isMonitoring
+                                ? null
+                                : vm.isConnected
+                                ? () => vm.disconnectESP32()
+                                : () => vm.connectESP32(),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (vm.isConnected && !vm.isMonitoring && !vm.monitoringDone)
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Mulai Monitoring'),
+                    onPressed: () => vm.startMonitoring(),
+                  ),
+                if (vm.isMonitoring)
+                  const Center(child: CircularProgressIndicator()),
+                if (vm.isConnected)
+                  Column(
+                    children: [
+                      const SizedBox(height: 24),
+                      Text(
+                        'BPM Detak Jantung Janin',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          '${vm.bpm}',
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        height: 120,
+                        child: Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Center(
+                              child: Text(
+                                'Grafik BPM (implementasi: gunakan package chart_flutter atau fl_chart)',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (vm.monitoringDone)
+                  Card(
+                    color:
+                        vm.monitoringResult == 'Normal'
+                            ? Colors.green[50]
+                            : Colors.red[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Hasil Monitoring: ${vm.monitoringResult}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  vm.monitoringResult == 'Normal'
+                                      ? Colors.green
+                                      : Colors.red,
+                            ),
+                          ),
+                          if (vm.classification != null)
+                            Text('Klasifikasi: ${vm.classification}'),
+                          const SizedBox(height: 8),
+                          TextField(
+                            decoration: const InputDecoration(
+                              labelText: 'Catatan Dokter',
+                            ),
+                            minLines: 2,
+                            maxLines: 4,
+                            onChanged: (val) => vm.updateDoctorNote(val),
+                          ),
+                          const SizedBox(height: 8),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.save),
+                            label: const Text('Simpan Hasil Pemeriksaan'),
+                            onPressed: () => vm.saveResult(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

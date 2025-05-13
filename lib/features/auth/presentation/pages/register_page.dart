@@ -14,6 +14,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  String selectedRole = 'patient';
+  final List<String> roles = ['patient', 'doctor'];
 
   @override
   void dispose() {
@@ -61,6 +63,25 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 obscureText: true,
               ),
               const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedRole,
+                items:
+                    roles
+                        .map(
+                          (role) => DropdownMenuItem(
+                            value: role,
+                            child: Text(
+                              role == 'patient' ? 'Pasien' : 'Dokter',
+                            ),
+                          ),
+                        )
+                        .toList(),
+                onChanged: (val) {
+                  if (val != null) setState(() => selectedRole = val);
+                },
+                decoration: const InputDecoration(labelText: 'Role'),
+              ),
+              const SizedBox(height: 16),
               if (vm.isLoading) const CircularProgressIndicator(),
               if (vm.error != null)
                 Text(vm.error!, style: const TextStyle(color: Colors.red)),
@@ -87,6 +108,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                                 nameController.text,
                                 emailController.text,
                                 passwordController.text,
+                                selectedRole,
                               );
                           if (result != null) {
                             ScaffoldMessenger.of(context).showSnackBar(

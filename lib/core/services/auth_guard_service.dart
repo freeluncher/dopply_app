@@ -6,8 +6,10 @@ class AuthGuardService {
     final isLoggedIn = user != null;
     final isAdmin = user?.role == 'admin';
 
-    // Jika belum login dan bukan di halaman login
-    if (!isLoggedIn && state.location != '/login') {
+    // Jika belum login dan bukan di halaman login atau register
+    if (!isLoggedIn &&
+        state.location != '/login' &&
+        state.location != '/register') {
       return '/login';
     }
     // Hanya admin boleh akses /admin dan turunannya
