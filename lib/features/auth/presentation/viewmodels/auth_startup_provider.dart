@@ -17,7 +17,7 @@ final tokenVerifyProvider = FutureProvider<bool>((ref) async {
   final token = await localDataSource.getToken();
   if (token == null) return false;
   final response = await http.get(
-    Uri.parse('https://dopply.my.id/v1/admin/token/verify'),
+    Uri.parse('https://dopply.my.id/v1/token/verify'),
     headers: {'Authorization': 'Bearer $token'},
   );
   if (response.statusCode == 200) {
