@@ -64,12 +64,10 @@ class DoctorDashboard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.new_releases),
-                  label: const Text('Pasien Terbaru'),
+                  icon: const Icon(Icons.people),
+                  label: const Text('Daftar Pasien'),
                   onPressed:
-                      isValid
-                          ? () => context.push('/doctor/new-patients')
-                          : null,
+                      isValid ? () => context.push('/doctor/patients') : null,
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(

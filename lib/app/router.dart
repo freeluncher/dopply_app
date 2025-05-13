@@ -14,6 +14,7 @@ import '../features/doctor/presentation/pages/patient_history_page.dart';
 import '../features/doctor/presentation/pages/patient_history_detail_page.dart';
 import '../features/auth/presentation/pages/account_settings_page.dart';
 import '../features/admin/presentation/pages/manage_users_page.dart';
+import '../features/doctor/presentation/pages/doctor_patients_page.dart';
 // import fitur lain sesuai kebutuhan...
 import '../features/auth/presentation/viewmodels/user_provider.dart';
 import '../core/services/auth_guard_service.dart';
@@ -83,6 +84,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder:
             (context, state) =>
                 Scaffold(body: Center(child: Text('Account Settings'))),
+      ),
+      GoRoute(
+        path: '/doctor/patients',
+        builder: (context, state) => const DoctorPatientsPage(),
       ),
       GoRoute(
         path: '/patientDashboard',
