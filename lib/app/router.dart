@@ -13,6 +13,7 @@ import '../features/doctor/presentation/pages/monitoring_page.dart';
 import '../features/doctor/presentation/pages/patient_history_page.dart';
 import '../features/doctor/presentation/pages/patient_history_detail_page.dart';
 import '../features/auth/presentation/pages/account_settings_page.dart';
+import '../features/admin/presentation/pages/manage_users_page.dart';
 // import fitur lain sesuai kebutuhan...
 import '../features/auth/presentation/viewmodels/user_provider.dart';
 import '../core/services/auth_guard_service.dart';
@@ -119,9 +120,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/admin/users',
         name: 'adminUsers',
-        builder:
-            (context, state) =>
-                Scaffold(body: Center(child: Text('Manajemen User'))),
+        builder: (context, state) => const ManageUsersPage(),
       ),
       GoRoute(
         path: '/admin/reports',

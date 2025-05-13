@@ -4,7 +4,7 @@ class RegisterUseCase {
   final AuthRepository repository;
   RegisterUseCase(this.repository);
 
-  Future<String?> execute(
+  Future<String> execute(
     String name,
     String email,
     String password,

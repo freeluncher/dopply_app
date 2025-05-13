@@ -37,14 +37,22 @@ class RegisterViewModel extends ChangeNotifier {
     error = null;
     success = null;
     notifyListeners();
-    final result = await _registerUseCase.execute(name, email, password, role);
-    isLoading = false;
-    if (result != null) {
-      success = 'Register Success!';
-      notifyListeners();
-      return result;
-    } else {
-      error = 'Register failed';
+    String result;
+    try {
+      result = await _registerUseCase.execute(name, email, password, role);
+      isLoading = false;
+      if (result.isNotEmpty && (result.contains('success') || result == role)) {
+        success = 'Register Success!';
+        notifyListeners();
+        return result;
+      } else {
+        error = result;
+        notifyListeners();
+        return null;
+      }
+    } catch (e) {
+      isLoading = false;
+      error = 'Register failed: ${e.toString()}';
       notifyListeners();
       return null;
     }

@@ -27,27 +27,40 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<String?> register(
+  Future<String> register(
     String name,
     String email,
     String password,
     String role,
   ) async {
-    final url = Uri.parse('https://dopply.my.id/api/v1/register');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'name': name,
-        'email': email,
-        'password': password,
-        'role': role,
-      }),
-    );
-    if (response.statusCode == 201 || response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['role'] ?? 'success';
+    try {
+      final url = Uri.parse('https://dopply.my.id/api/v1/register');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'password': password,
+          'role': role,
+        }),
+      );
+      if (response.statusCode >= 500) {
+        return 'Register failed: Server error';
+      }
+      dynamic data;
+      try {
+        data = jsonDecode(response.body);
+      } catch (_) {
+        return 'Register failed: ${response.body}';
+      }
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return data['role'] ?? 'success';
+      } else {
+        return data['message'] ?? 'Register failed';
+      }
+    } catch (e) {
+      return 'Register failed: ${e.toString()}';
     }
-    return null;
   }
 }

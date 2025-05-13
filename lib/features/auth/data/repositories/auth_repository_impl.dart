@@ -18,6 +18,7 @@ class AuthRepositoryImpl implements AuthRepository {
         id: data['id']?.toString() ?? '',
         email: data['email'] ?? '',
         role: data['role'] ?? '',
+        isValid: data['is_valid'] == true,
         // name: data['name'] ?? '', // tambahkan jika User punya field name
       );
     }
@@ -25,13 +26,14 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<String?> register(
+  Future<String> register(
     String name,
     String email,
     String password,
     String role,
   ) async {
-    return await remoteDataSource.register(name, email, password, role);
+    final result = await remoteDataSource.register(name, email, password, role);
+    return result ?? 'Register failed';
   }
 
   @override
@@ -48,6 +50,7 @@ class AuthRepositoryImpl implements AuthRepository {
         id: payload['id']?.toString() ?? '',
         email: payload['email'] ?? '',
         role: payload['role'] ?? '',
+        isValid: payload['is_valid'] == true,
       );
     } catch (_) {
       return null;
