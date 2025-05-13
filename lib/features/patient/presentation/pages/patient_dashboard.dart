@@ -7,18 +7,7 @@ class PatientDashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Patient Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              // Implementasikan logout sesuai provider Anda
-              context.go('/login');
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Patient Dashboard')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(

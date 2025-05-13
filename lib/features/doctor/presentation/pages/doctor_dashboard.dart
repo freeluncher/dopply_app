@@ -11,18 +11,7 @@ class DoctorDashboard extends ConsumerWidget {
     final user = ref.watch(userProvider);
     final isValid = user?.isValid ?? false;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Doctor Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () {
-              ref.read(userProvider.notifier).state = null;
-              context.go('/login');
-            },
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Doctor Dashboard')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

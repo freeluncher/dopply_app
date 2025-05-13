@@ -13,15 +13,7 @@ class AdminDashboard extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Admin Dashboard'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () {
-              ref.read(loginStatusProvider.notifier).state = null;
-              context.go('/login');
-            },
-          ),
-        ],
+        // Hapus actions logout
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../domain/entities/user.dart';
 import '../viewmodels/user_provider.dart';
+import '../viewmodels/login_view_model.dart';
 
 class AccountSettingsPage extends ConsumerWidget {
   const AccountSettingsPage({Key? key}) : super(key: key);
@@ -83,6 +85,18 @@ class AccountSettingsPage extends ConsumerWidget {
               leading: Icon(Icons.favorite),
               title: Text('Fitur khusus pasien'),
             ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Logout', style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              await ref.read(authRepositoryProvider).logout();
+              ref.read(userProvider.notifier).state = null;
+              if (context.mounted) {
+                context.go('/login');
+              }
+            },
+          ),
         ],
       ),
     );
