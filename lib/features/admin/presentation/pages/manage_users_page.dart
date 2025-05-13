@@ -3,11 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'doctor_validation_provider.dart';
+import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
 
 final doctorValidationListProvider = FutureProvider<List<Map<String, dynamic>>>(
   (ref) async {
+    final localDataSource = AuthLocalDataSource();
+    final token = await localDataSource.getToken();
+    if (token == null) return [];
     final response = await http.get(
       Uri.parse('https://dopply.my.id/v1/admin/doctor/validation-requests'),
+      headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -27,9 +32,18 @@ class ManageUsersPage extends ConsumerWidget {
     WidgetRef ref,
     int doctorId,
   ) async {
+    final localDataSource = AuthLocalDataSource();
+    final token = await localDataSource.getToken();
+    if (token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Token admin tidak ditemukan!')),
+      );
+      return;
+    }
     try {
       final response = await http.post(
         Uri.parse('https://dopply.my.id/v1/admin/doctor/validate/$doctorId'),
+        headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(

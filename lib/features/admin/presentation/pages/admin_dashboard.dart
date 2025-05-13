@@ -30,24 +30,60 @@ class AdminDashboard extends ConsumerWidget {
           children: [
             validationCountAsync.when(
               data:
-                  (count) =>
-                      count > 0
-                          ? Card(
-                            color: Colors.yellow[100],
-                            child: ListTile(
-                              leading: const Icon(
-                                Icons.warning,
-                                color: Colors.orange,
-                              ),
-                              title: Text(
-                                'Ada $count permintaan verifikasi dokter!',
-                              ),
-                              subtitle: const Text(
-                                'Segera lakukan verifikasi pada menu Manajemen User.',
+                  (count) => Card(
+                    color: count > 0 ? Colors.red[100] : Colors.green[100],
+                    child: ListTile(
+                      leading: Stack(
+                        children: [
+                          const Icon(
+                            Icons.medical_services,
+                            size: 32,
+                            color: Colors.blue,
+                          ),
+                          if (count > 0)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 24,
+                                  minHeight: 24,
+                                ),
+                                child: Text(
+                                  '$count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
                             ),
-                          )
-                          : const SizedBox.shrink(),
+                        ],
+                      ),
+                      title: Text(
+                        count > 0
+                            ? 'Ada $count permintaan verifikasi dokter!'
+                            : 'Tidak ada permintaan verifikasi dokter.',
+                        style: TextStyle(
+                          color:
+                              count > 0 ? Colors.red[900] : Colors.green[900],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle:
+                          count > 0
+                              ? const Text(
+                                'Segera lakukan verifikasi pada menu Manajemen User.',
+                              )
+                              : null,
+                    ),
+                  ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => const SizedBox.shrink(),
             ),
