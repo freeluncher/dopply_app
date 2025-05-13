@@ -8,7 +8,7 @@ final _secureStorage = FlutterSecureStorage();
 
 Future<String?> getAdminToken() async {
   // Ganti key sesuai penyimpanan token Anda
-  return await _secureStorage.read(key: 'jwt_token');
+  return await _secureStorage.read(key: 'token');
 }
 
 final doctorValidationCountProvider = FutureProvider<int>((ref) async {

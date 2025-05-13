@@ -2,6 +2,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/monitoring_api_service.dart';
+import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
+import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
+
+final patientsByDoctorProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  final api = MonitoringApiService();
+  final token = await AuthLocalDataSource().getToken();
+  if (token == null) return [];
+  return await api.getPatientsByDoctorId(token);
+});
 
 class MonitoringViewModel extends ChangeNotifier {
   int bpm = 120;
@@ -16,6 +27,11 @@ class MonitoringViewModel extends ChangeNotifier {
   List<int> bpmData = [];
   String patientId = '001'; // contoh, sebaiknya dari data pasien
   final MonitoringApiService _apiService = MonitoringApiService();
+  final Ref ref;
+  List<Map<String, dynamic>> filteredPatients = [];
+  String searchQuery = '';
+
+  MonitoringViewModel(this.ref);
 
   void selectPatient(String patient) {
     selectedPatient = patient;
@@ -53,11 +69,18 @@ class MonitoringViewModel extends ChangeNotifier {
       _bpmTimer?.cancel();
       isMonitoring = false;
       monitoringDone = true;
+      // Ambil user dari provider
+      final user = ref.read(userProvider);
+      String? doctorIdToSend;
+      if (user != null && user.role == 'doctor') {
+        doctorIdToSend = user.doctorId ?? user.id;
+      }
       // Kirim ke API FastAPI
       final apiResult = await _apiService.sendMonitoringResult(
         patientId: patientId,
         bpmData: bpmData,
         doctorNote: doctorNote,
+        doctorId: doctorIdToSend,
       );
       if (apiResult != null) {
         monitoringResult = apiResult['result'] ?? 'Unknown';
@@ -85,6 +108,18 @@ class MonitoringViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void filterPatients(List<Map<String, dynamic>> patients, String query) {
+    searchQuery = query;
+    filteredPatients =
+        patients
+            .where(
+              (p) =>
+                  (p['name'] ?? '').toLowerCase().contains(query.toLowerCase()),
+            )
+            .toList();
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     _bpmTimer?.cancel();
@@ -93,5 +128,5 @@ class MonitoringViewModel extends ChangeNotifier {
 }
 
 final monitoringViewModelProvider = ChangeNotifierProvider(
-  (ref) => MonitoringViewModel(),
+  (ref) => MonitoringViewModel(ref),
 );

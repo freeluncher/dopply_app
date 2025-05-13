@@ -11,9 +11,14 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<User?> login(String email, String password) async {
+    // Clear storage sebelum login baru
+    await localDataSource.clearToken();
     final data = await remoteDataSource.login(email, password);
     if (data != null && data['access_token'] != null) {
+      print('Token login (access_token): ${data['access_token']}'); // Debug log
       await localDataSource.saveToken(data['access_token']);
+      final cekToken = await localDataSource.getToken();
+      print('Token yang disimpan di storage: $cekToken'); // Debug log
       return User(
         id: data['id']?.toString() ?? '',
         email: data['email'] ?? '',
