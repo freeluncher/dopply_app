@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dopply_app/features/doctor/data/services/record_api_service.dart';
 
 class PatientHistoryPage extends StatefulWidget {
   const PatientHistoryPage({Key? key}) : super(key: key);
@@ -10,19 +11,33 @@ class PatientHistoryPage extends StatefulWidget {
 
 class _PatientHistoryPageState extends State<PatientHistoryPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, String>> allRecords = [
-    {'id': '001', 'name': 'Siti Aminah', 'summary': 'Kontrol kehamilan 1'},
-    {'id': '002', 'name': 'Dewi Lestari', 'summary': 'Monitoring janin'},
-    {'id': '003', 'name': 'Rina Wulandari', 'summary': 'USG trimester 2'},
-    // Tambahkan data dummy lain sesuai kebutuhan
-  ];
-  List<Map<String, String>> filteredRecords = [];
+  List<Map<String, dynamic>> allRecords = [];
+  List<Map<String, dynamic>> filteredRecords = [];
+  bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    filteredRecords = allRecords;
+    _fetchRecords();
     _searchController.addListener(_onSearch);
+  }
+
+  Future<void> _fetchRecords() async {
+    setState(() => isLoading = true);
+    final api = RecordApiService();
+    final records = await api.fetchRecords();
+    allRecords =
+        records
+            .map(
+              (r) => {
+                'id': r['id']?.toString() ?? '-',
+                'name': 'Patient #${r['patient_id']?.toString() ?? '-'}',
+                'summary': r['classification'] ?? r['notes'] ?? '-',
+              },
+            )
+            .toList();
+    filteredRecords = allRecords;
+    setState(() => isLoading = false);
   }
 
   void _onSearch() {
@@ -60,7 +75,9 @@ class _PatientHistoryPageState extends State<PatientHistoryPage> {
             const SizedBox(height: 16),
             Expanded(
               child:
-                  filteredRecords.isEmpty
+                  isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : filteredRecords.isEmpty
                       ? const Center(child: Text('Tidak ada riwayat ditemukan'))
                       : ListView.builder(
                         itemCount: filteredRecords.length,
