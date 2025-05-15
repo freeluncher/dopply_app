@@ -65,12 +65,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/doctor/patient-history/:id',
         builder: (context, state) {
-          final id = state.pathParameters['id'] ?? '';
-          final name =
-              state.extra is Map ? (state.extra as Map)['name'] ?? '' : '';
-          final summary =
-              state.extra is Map ? (state.extra as Map)['summary'] ?? '' : '';
-          return PatientHistoryDetailPage(id: id, name: name, summary: summary);
+          final record = state.extra as Map<String, dynamic>? ?? {};
+          return PatientHistoryDetailPage(record: record);
         },
       ),
       GoRoute(

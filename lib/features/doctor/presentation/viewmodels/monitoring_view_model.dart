@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/services/monitoring_api_service.dart';
 import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
 import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
+import '../../data/services/patient_api_service.dart';
 
 final patientsByDoctorProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
@@ -11,7 +12,13 @@ final patientsByDoctorProvider = FutureProvider<List<Map<String, dynamic>>>((
   final api = MonitoringApiService();
   final token = await AuthLocalDataSource().getToken();
   if (token == null) return [];
-  return await api.getPatientsByDoctorId(token);
+  final user = ref.read(userProvider);
+  final doctorId = user?.doctorId ?? user?.id;
+  if (doctorId == null) return [];
+  return await api.getPatientsByDoctorId(
+    token,
+    doctorId: int.parse(doctorId.toString()),
+  );
 });
 
 class MonitoringViewModel extends ChangeNotifier {

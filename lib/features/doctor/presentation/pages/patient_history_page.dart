@@ -26,16 +26,7 @@ class _PatientHistoryPageState extends State<PatientHistoryPage> {
     setState(() => isLoading = true);
     final api = RecordApiService();
     final records = await api.fetchRecords();
-    allRecords =
-        records
-            .map(
-              (r) => {
-                'id': r['id']?.toString() ?? '-',
-                'name': 'Patient #${r['patient_id']?.toString() ?? '-'}',
-                'summary': r['classification'] ?? r['notes'] ?? '-',
-              },
-            )
-            .toList();
+    allRecords = records;
     filteredRecords = allRecords;
     setState(() => isLoading = false);
   }
@@ -85,16 +76,13 @@ class _PatientHistoryPageState extends State<PatientHistoryPage> {
                           final record = filteredRecords[index];
                           return Card(
                             child: ListTile(
-                              title: Text(record['name'] ?? '-'),
-                              subtitle: Text(record['summary'] ?? ''),
+                              title: Text('Pasien #${record['patient_id'] ?? '-'}'),
+                              subtitle: Text(record['classification'] ?? record['notes'] ?? '-'),
                               trailing: Text('#${record['id']}'),
                               onTap: () {
                                 context.push(
                                   '/doctor/patient-history/${record['id']}',
-                                  extra: {
-                                    'name': record['name'],
-                                    'summary': record['summary'],
-                                  },
+                                  extra: record,
                                 );
                               },
                             ),

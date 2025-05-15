@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
 
 class MonitoringApiService {
-  final String _baseUrl = 'https://dopply.my.id/v1';
+  final String _baseUrl = 'https://dopply.my.id/api/v1';
 
   Future<Map<String, dynamic>?> sendMonitoringResult({
     required String patientId,
@@ -36,12 +36,12 @@ class MonitoringApiService {
 
   Future<List<Map<String, dynamic>>> getPatientsByDoctorId(
     String token, {
+    required int doctorId,
     String? search,
   }) async {
-    print('JWT token yang dikirim: $token');
     try {
       final uri = Uri.parse(
-        '$_baseUrl/patients/by-doctor',
+        '$_baseUrl/doctors/$doctorId/patients',
       ).replace(queryParameters: search != null ? {'search': search} : null);
       final response = await http.get(
         uri,
@@ -60,19 +60,18 @@ class MonitoringApiService {
   }
 
   Future<List<Map<String, dynamic>>> getPatientsByDoctorIdWithStorage({
+    required int doctorId,
     String? search,
   }) async {
     final token = await AuthLocalDataSource().getToken();
-    print('Token diambil dari storage: $token');
     if (token == null) {
       print('Token tidak ditemukan, user belum login.');
       return [];
     }
-    // Validasi sederhana: JWT biasanya mengandung dua titik
-    if (!token.contains('.') || token.length < 20) {
-      print('Peringatan: Token yang diambil bukan JWT yang valid!');
-      return [];
-    }
-    return await getPatientsByDoctorId(token, search: search);
+    return await getPatientsByDoctorId(
+      token,
+      doctorId: doctorId,
+      search: search,
+    );
   }
 }
