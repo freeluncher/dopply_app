@@ -10,7 +10,11 @@ class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl(this.remoteDataSource, this.localDataSource);
 
   @override
-  Future<User?> login(String email, String password) async {
+  Future<User?> login(
+    String email,
+    String password, {
+    void Function(String?)? onError,
+  }) async {
     // Clear storage sebelum login baru
     await localDataSource.clearToken();
     final data = await remoteDataSource.login(email, password);
@@ -26,6 +30,8 @@ class AuthRepositoryImpl implements AuthRepository {
         isValid: data['is_valid'] == true,
         // name: data['name'] ?? '', // tambahkan jika User punya field name
       );
+    } else if (data != null && data['error'] != null) {
+      if (onError != null) onError(data['error'] as String);
     }
     return null;
   }

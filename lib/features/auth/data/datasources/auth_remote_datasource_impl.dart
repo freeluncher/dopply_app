@@ -22,8 +22,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     );
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
+    } else {
+      // Try to parse error message from backend
+      try {
+        final data = jsonDecode(response.body);
+        return {'error': data['message'] ?? 'Login failed'};
+      } catch (_) {
+        return {'error': 'Login failed: ${response.body}'};
+      }
     }
-    return null;
   }
 
   @override

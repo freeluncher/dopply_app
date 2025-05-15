@@ -42,18 +42,30 @@ class LoginViewModel extends ChangeNotifier {
   LoginViewModel(this._loginUseCase);
 
   Future<User?> login(String email, String password) async {
+    print('[Login] Request: {email: $email, password: [HIDDEN]}');
     isLoading = true;
     error = null;
     notifyListeners();
 
-    final user = await _loginUseCase.execute(email, password);
+    String? backendError;
+    final user = await _loginUseCase.execute(
+      email,
+      password,
+      onError: (err) {
+        backendError = err;
+      },
+    );
     isLoading = false;
     if (user != null) {
+      print('[Login] Result: success, user: ${user.email}, role: ${user.role}');
       error = null;
       notifyListeners();
       return user;
     } else {
-      error = 'Invalid credentials';
+      print(
+        '[Login] Result: failed, error: ${backendError ?? 'Invalid credentials'}',
+      );
+      error = backendError ?? 'Invalid credentials';
       notifyListeners();
       return null;
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dopply_app/features/doctor/data/services/monitoring_api_service.dart';
+import 'package:dopply_app/features/doctor/data/services/patient_api_service.dart';
 
 class DoctorPatientsPage extends StatefulWidget {
   const DoctorPatientsPage({Key? key}) : super(key: key);
@@ -44,34 +45,268 @@ class _DoctorPatientsPageState extends State<DoctorPatientsPage> {
     });
   }
 
-  void _onEdit(Map<String, dynamic> patient) {
-    // TODO: Implement edit patient
+  void _onEdit(Map<String, dynamic> patient) async {
+    final nameController = TextEditingController(text: patient['name'] ?? '');
+    final emailController = TextEditingController(text: patient['email'] ?? '');
+    final passwordController = TextEditingController();
+    final addressController = TextEditingController(
+      text: patient['address'] ?? '',
+    );
+    final birthDateController = TextEditingController(
+      text: patient['birth_date'] ?? '',
+    );
+    final medicalNoteController = TextEditingController(
+      text: patient['medical_note'] ?? '',
+    );
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Edit Pasien'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Nama'),
+                      validator:
+                          (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      validator:
+                          (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: passwordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password (opsional)',
+                      ),
+                      obscureText: true,
+                    ),
+                    TextFormField(
+                      controller: addressController,
+                      decoration: const InputDecoration(labelText: 'Alamat'),
+                    ),
+                    TextFormField(
+                      controller: birthDateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Tanggal Lahir (YYYY-MM-DD)',
+                      ),
+                    ),
+                    TextFormField(
+                      controller: medicalNoteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Catatan Medis',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState?.validate() ?? false) {
+                    final api = PatientApiService();
+                    final updateData = {
+                      'name': nameController.text,
+                      'email': emailController.text,
+                      'birth_date': birthDateController.text,
+                      'address': addressController.text,
+                      'medical_note': medicalNoteController.text,
+                    };
+                    if (passwordController.text.isNotEmpty) {
+                      updateData['password'] = passwordController.text;
+                    }
+                    final success = await api.updatePatient(
+                      patient['id'],
+                      updateData,
+                    );
+                    Navigator.pop(context, success);
+                  }
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          ),
+    );
+    if (result == true) {
+      _fetchPatients();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Data pasien berhasil diupdate!')),
+      );
+    }
   }
 
-  void _onDelete(Map<String, dynamic> patient) {
-    // TODO: Implement delete patient
+  void _onDelete(Map<String, dynamic> patient) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Hapus Pasien'),
+            content: Text('Yakin ingin menghapus pasien ini?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Hapus'),
+              ),
+            ],
+          ),
+    );
+    if (confirm == true) {
+      final api = PatientApiService();
+      final success = await api.deletePatient(
+        patient['patient_id'] ?? patient['id'],
+      );
+      if (success) {
+        _fetchPatients();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pasien berhasil dihapus!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menghapus pasien!')),
+        );
+      }
+    }
   }
 
-  void _onAdd() {
-    // TODO: Implement add patient
+  void _onAdd() async {
+    final nameController = TextEditingController();
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final roleController = TextEditingController(text: 'patient');
+    final addressController = TextEditingController();
+    final birthDateController = TextEditingController();
+    final medicalNoteController = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    final result = await showDialog<bool>(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Tambah Pasien'),
+            content: Form(
+              key: formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Nama'),
+                      validator:
+                          (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                      validator:
+                          (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    TextFormField(
+                      controller: passwordController,
+                      decoration: const InputDecoration(labelText: 'Password'),
+                      obscureText: true,
+                      validator:
+                          (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                    ),
+                    // Role hidden, default patient
+                    TextFormField(
+                      controller: roleController,
+                      decoration: const InputDecoration(labelText: 'Role'),
+                      readOnly: true,
+                    ),
+                    TextFormField(
+                      controller: addressController,
+                      decoration: const InputDecoration(
+                        labelText: 'Alamat (opsional)',
+                      ),
+                    ),
+                    TextFormField(
+                      controller: birthDateController,
+                      decoration: const InputDecoration(
+                        labelText: 'Tanggal Lahir (YYYY-MM-DD, opsional)',
+                      ),
+                    ),
+                    TextFormField(
+                      controller: medicalNoteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Catatan Medis (opsional)',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  if (formKey.currentState?.validate() ?? false) {
+                    final api = PatientApiService();
+                    final data = {
+                      'name': nameController.text,
+                      'email': emailController.text,
+                      'password': passwordController.text,
+                      'role': roleController.text,
+                    };
+                    if (birthDateController.text.isNotEmpty)
+                      data['birth_date'] = birthDateController.text;
+                    if (addressController.text.isNotEmpty)
+                      data['address'] = addressController.text;
+                    if (medicalNoteController.text.isNotEmpty)
+                      data['medical_note'] = medicalNoteController.text;
+                    print('[Register] Request: $data');
+                    final success = await api.registerPatient(data);
+                    print('[Register] Result: $success');
+                    Navigator.pop(context, success);
+                  }
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          ),
+    );
+    if (result == true) {
+      _fetchPatients();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pasien berhasil didaftarkan!')),
+      );
+    }
   }
 
-  void _onDetail(Map<String, dynamic> patient) {
-    // TODO: Show patient detail page
+  void _onDetail(Map<String, dynamic> patient) async {
+    final api = PatientApiService();
+    final detail = await api.getPatientDetail(patient['id']);
     showDialog(
       context: context,
       builder:
           (_) => AlertDialog(
-            title: Text('Detail Pasien'),
+            title: const Text('Detail Pasien'),
             content: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Nama: \\${patient['name'] ?? '-'}'),
-                  Text('Email: \\${patient['email'] ?? '-'}'),
-                  Text('Alamat: \\${patient['address'] ?? '-'}'),
-                  Text('Tanggal Lahir: \\${patient['birth_date'] ?? '-'}'),
-                  Text('Catatan Medis: \\${patient['medical_note'] ?? '-'}'),
+                  Text('Nama: \\${detail?['name'] ?? '-'}'),
+                  Text('Email: \\${detail?['email'] ?? '-'}'),
+                  Text('Tanggal Lahir: \\${detail?['birth_date'] ?? '-'}'),
+                  Text('Alamat: \\${detail?['address'] ?? '-'}'),
+                  Text('Catatan Medis: \\${detail?['medical_note'] ?? '-'}'),
                 ],
               ),
             ),

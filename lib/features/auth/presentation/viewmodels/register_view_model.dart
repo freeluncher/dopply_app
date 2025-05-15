@@ -33,6 +33,9 @@ class RegisterViewModel extends ChangeNotifier {
     String password,
     String role,
   ) async {
+    print(
+      '[Register] Request: {name: $name, email: $email, password: [HIDDEN], role: $role}',
+    );
     isLoading = true;
     error = null;
     success = null;
@@ -41,6 +44,7 @@ class RegisterViewModel extends ChangeNotifier {
     try {
       result = await _registerUseCase.execute(name, email, password, role);
       isLoading = false;
+      print('[Register] Result: $result');
       if (result.isNotEmpty && (result.contains('success') || result == role)) {
         success = 'Register Success!';
         notifyListeners();
@@ -53,6 +57,7 @@ class RegisterViewModel extends ChangeNotifier {
     } catch (e) {
       isLoading = false;
       error = 'Register failed: ${e.toString()}';
+      print('[Register] Exception: $error');
       notifyListeners();
       return null;
     }
