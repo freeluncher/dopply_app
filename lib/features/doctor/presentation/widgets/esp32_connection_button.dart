@@ -27,6 +27,9 @@ class ESP32ConnectionButton extends StatelessWidget {
                     : isConnected
                     ? onDisconnect
                     : onConnect,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isConnected ? Colors.red : null,
+            ),
           ),
         ),
       ],

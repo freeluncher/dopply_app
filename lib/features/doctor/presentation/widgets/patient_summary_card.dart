@@ -18,11 +18,14 @@ class PatientSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              patientName,
+              patientName.isEmpty ? 'Belum ada pasien dipilih' : patientName,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text('ID Pasien: $patientId', style: const TextStyle(fontSize: 14)),
+            Text(
+              'ID Pasien: ${patientId.isEmpty ? '-' : patientId}',
+              style: const TextStyle(fontSize: 14),
+            ),
             const SizedBox(height: 8),
             const Text('Data singkat: ...'),
           ],

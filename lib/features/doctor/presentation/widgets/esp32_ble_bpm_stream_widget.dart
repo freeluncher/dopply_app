@@ -101,7 +101,9 @@ class _Esp32BleBpmStreamWidgetState extends State<Esp32BleBpmStreamWidget> {
       print('[BLE] Disconnected.');
     }
     _device = null;
-    setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   Future<void> _sendCommand(String command) async {
@@ -120,7 +122,10 @@ class _Esp32BleBpmStreamWidgetState extends State<Esp32BleBpmStreamWidget> {
   @override
   void dispose() {
     widget.controller?._state = null;
-    _disconnect();
+    // Hindari _disconnect jika sudah tidak mounted
+    if (mounted) {
+      _disconnect();
+    }
     super.dispose();
   }
 

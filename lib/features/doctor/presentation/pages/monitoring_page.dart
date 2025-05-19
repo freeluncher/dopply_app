@@ -18,99 +18,146 @@ class MonitoringPage extends ConsumerStatefulWidget {
 }
 
 class _MonitoringPageState extends ConsumerState<MonitoringPage> {
-  final Esp32BleBpmStreamWidgetController _bleController =
-      Esp32BleBpmStreamWidgetController();
+  Esp32BleBpmStreamWidgetController? _bleController;
 
   @override
   void initState() {
     super.initState();
-    // Hubungkan controller BLE ke ViewModel
+    // Buat controller baru setiap halaman dibuka
+    _bleController = Esp32BleBpmStreamWidgetController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(monitoringViewModelProvider.notifier)
+          .setBleController(_bleController!);
+    });
+  }
+
+  @override
+  void dispose() {
+    debugPrint('[MONITORING_PAGE] dispose dipanggil pada ${DateTime.now()}');
+    final notifier = ref.read(monitoringViewModelProvider.notifier);
     final vm = ref.read(monitoringViewModelProvider);
-    vm.setBleController(_bleController);
+    debugPrint(
+      '[MONITORING_PAGE] Sebelum reset: isMonitoring=${vm.isMonitoring}, isConnected=${vm.isConnected}',
+    );
+    if (vm.isMonitoring) {
+      notifier.stopMonitoringESP32();
+    }
+    if (vm.isConnected) {
+      _bleController?.disconnect();
+      notifier.disconnectESP32(silent: true);
+    }
+    notifier.resetAllMonitoringState();
+    _bleController = null; // pastikan controller dihapus
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(monitoringViewModelProvider);
     final appBarHeight = kToolbarHeight;
-    return Scaffold(
-      appBar: AppBar(title: const Text('Monitoring Detak Jantung Janin')),
-      body: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height - appBarHeight - 32,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                ElevatedButton.icon(
-                  icon: const Icon(Icons.person_search),
-                  label: const Text('Pilih/Tambah Pasien'),
-                  onPressed:
-                      vm.isMonitoring
-                          ? null
-                          : () async {
-                            await showDialog(
-                              context: context,
-                              builder: (context) => const PatientPickerDialog(),
-                            );
-                          },
-                ),
-                const SizedBox(height: 16),
-                PatientSummaryCard(
-                  patientName: vm.patientName,
-                  patientId: vm.patientId,
-                ),
-                const SizedBox(height: 16),
-                ESP32ConnectionButton(
-                  isConnected: vm.isConnected,
-                  isMonitoring: vm.isMonitoring,
-                  onConnect: () {
-                    _bleController.connect();
-                    vm.connectESP32();
-                  },
-                  onDisconnect: () {
-                    _bleController.disconnect();
-                    vm.disconnectESP32();
-                  },
-                ),
-                const SizedBox(height: 16),
-                MonitoringButton(
-                  isConnected: vm.isConnected,
-                  isMonitoring: vm.isMonitoring,
-                  monitoringDone: vm.monitoringDone,
-                  onStart: vm.startMonitoring,
-                ),
-                if (vm.isMonitoring)
+    return WillPopScope(
+      onWillPop: () async {
+        // Panggil semua reset/disconnect logic sebelum keluar
+        final notifier = ref.read(monitoringViewModelProvider.notifier);
+        final vm = ref.read(monitoringViewModelProvider);
+        debugPrint(
+          '[MONITORING_PAGE] WillPopScope triggered at \\${DateTime.now()}',
+        );
+        if (vm.isMonitoring) {
+          notifier.stopMonitoringESP32();
+        }
+        if (vm.isConnected) {
+          _bleController?.disconnect();
+          notifier.disconnectESP32(silent: true);
+        }
+        notifier.resetAllMonitoringState();
+        _bleController = null;
+        return true; // izinkan pop
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Monitoring Detak Jantung Janin')),
+        body: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height - appBarHeight - 32,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.stop),
-                    label: const Text('Stop Monitoring'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    onPressed: () async {
-                      vm.stopMonitoring(context);
+                    icon: const Icon(Icons.person_search),
+                    label: const Text('Pilih/Tambah Pasien'),
+                    onPressed:
+                        vm.isMonitoring
+                            ? null
+                            : () async {
+                              await showDialog(
+                                context: context,
+                                builder:
+                                    (context) => const PatientPickerDialog(),
+                              );
+                            },
+                  ),
+                  const SizedBox(height: 16),
+                  PatientSummaryCard(
+                    patientName:
+                        vm.patientName.isEmpty
+                            ? 'Belum ada pasien dipilih'
+                            : vm.patientName,
+                    patientId: vm.patientId.isEmpty ? '-' : vm.patientId,
+                  ),
+                  const SizedBox(height: 16),
+                  ESP32ConnectionButton(
+                    isConnected: vm.isConnected,
+                    isMonitoring: vm.isMonitoring,
+                    onConnect: () {
+                      _bleController?.connect();
+                      vm.connectESP32();
+                    },
+                    onDisconnect: () {
+                      _bleController?.disconnect();
+                      vm.disconnectESP32();
                     },
                   ),
-                MonitoringProgress(isMonitoring: vm.isMonitoring),
-                Esp32BleBpmStreamWidget(
-                  controller: _bleController,
-                  onBpmReceived: (bpm) {
-                    vm.updateBpmFromEsp32(bpm);
-                  },
-                ),
-                BpmRealtimeChartWidget(bpmData: vm.bpmDataForChart),
-                MonitoringResultCard(
-                  monitoringResult: vm.monitoringResult,
-                  classification: vm.classification,
-                  doctorNote: vm.doctorNote,
-                  onNoteChanged: vm.updateDoctorNote,
-                  onSave: () => vm.saveResult(context),
-                  monitoringDone: vm.monitoringDone,
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  MonitoringButton(
+                    isConnected: vm.isConnected,
+                    isMonitoring: vm.isMonitoring,
+                    monitoringDone: vm.monitoringDone,
+                    onStart: vm.startMonitoring,
+                  ),
+                  if (vm.isMonitoring)
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.stop),
+                      label: const Text('Stop Monitoring'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      onPressed: () async {
+                        vm.stopMonitoring(context);
+                      },
+                    ),
+                  MonitoringProgress(isMonitoring: vm.isMonitoring),
+                  Esp32BleBpmStreamWidget(
+                    controller: _bleController!,
+                    onBpmReceived: (bpm) {
+                      vm.updateBpmFromEsp32(bpm);
+                    },
+                  ),
+                  BpmRealtimeChartWidget(bpmData: vm.bpmDataForChart),
+                  MonitoringResultCard(
+                    monitoringResult: vm.monitoringResult,
+                    classification: vm.classification,
+                    doctorNote: vm.doctorNote,
+                    onNoteChanged: vm.updateDoctorNote,
+                    onSave: () => vm.saveResult(context),
+                    monitoringDone: vm.monitoringDone,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

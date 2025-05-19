@@ -60,13 +60,13 @@ class MonitoringViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void disconnectESP32() {
+  void disconnectESP32({bool silent = false}) {
     isConnected = false;
     isMonitoring = false;
     monitoringDone = false;
     monitoringResult = null;
     classification = null;
-    notifyListeners();
+    if (!silent) notifyListeners();
   }
 
   void setBleController(Esp32BleBpmStreamWidgetController controller) {
@@ -298,6 +298,29 @@ class MonitoringViewModel extends ChangeNotifier {
     }
   }
 
+  void resetAllMonitoringState() {
+    debugPrint(
+      '[RESET] MonitoringViewModel: resetAllMonitoringState dipanggil pada ${DateTime.now()}',
+    );
+    debugPrint(
+      '[RESET] Sebelum reset: isConnected=$isConnected, isMonitoring=$isMonitoring, monitoringDone=$monitoringDone, patient=$selectedPatientName/$selectedPatientId, bpmData.length=${bpmData.length}',
+    );
+    isConnected = false;
+    isMonitoring = false;
+    monitoringDone = false;
+    monitoringResult = null;
+    classification = null;
+    doctorNote = '';
+    bpmData = [];
+    selectedPatientName = '';
+    selectedPatientId = '';
+    monitoringStartTime = null;
+    debugPrint(
+      '[RESET] Setelah reset: isConnected=$isConnected, isMonitoring=$isMonitoring, monitoringDone=$monitoringDone, patient=$selectedPatientName/$selectedPatientId, bpmData.length=${bpmData.length}',
+    );
+    notifyListeners();
+  }
+
   String get patientName => selectedPatientName;
   String get patientId => selectedPatientId;
 
@@ -307,6 +330,7 @@ class MonitoringViewModel extends ChangeNotifier {
   }
 }
 
-final monitoringViewModelProvider = ChangeNotifierProvider(
-  (ref) => MonitoringViewModel(ref),
-);
+final monitoringViewModelProvider =
+    AutoDisposeChangeNotifierProvider<MonitoringViewModel>(
+      (ref) => MonitoringViewModel(ref),
+    );

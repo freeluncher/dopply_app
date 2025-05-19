@@ -36,13 +36,52 @@ class BpmRealtimeChartWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Grafik Detak Jantung Janin (BPM)',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment:
+                  CrossAxisAlignment
+                      .start, // Tambah ini agar header tidak overflow
+              children: [
+                Flexible(
+                  child: const Text(
+                    'Grafik Detak Jantung Janin (BPM)',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (spots.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.favorite, color: Colors.red[400], size: 16),
+                        const SizedBox(width: 4),
+                        Text(
+                          'BPM: ${spots.last.y.toInt()}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: Colors.red,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
             SizedBox(
               height: 180,
+              width: double.infinity, // Tambahkan ini agar chart tidak overflow
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
@@ -119,27 +158,71 @@ class BpmRealtimeChartWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Text(
-                  'Min: ${spots.map((e) => e.y.toInt()).reduce((a, b) => a < b ? a : b)}',
-                  style: const TextStyle(fontSize: 12),
+                _StatBox(
+                  label: 'Min',
+                  value:
+                      spots
+                          .map((e) => e.y.toInt())
+                          .reduce((a, b) => a < b ? a : b)
+                          .toString(),
+                  color: Colors.blue[700],
                 ),
-                Text(
-                  'Max: ${spots.map((e) => e.y.toInt()).reduce((a, b) => a > b ? a : b)}',
-                  style: const TextStyle(fontSize: 12),
+                _StatBox(
+                  label: 'Max',
+                  value:
+                      spots
+                          .map((e) => e.y.toInt())
+                          .reduce((a, b) => a > b ? a : b)
+                          .toString(),
+                  color: Colors.orange[700],
                 ),
-                Text(
-                  'Terbaru: ${spots.last.y.toInt()}',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                _StatBox(
+                  label: 'Terbaru',
+                  value: spots.last.y.toInt().toString(),
+                  color: Colors.red[700],
                 ),
               ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// Tambahkan widget kecil untuk statistik
+class _StatBox extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? color;
+  const _StatBox({required this.label, required this.value, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color?.withOpacity(0.08) ?? Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color ?? Colors.grey, width: 1),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: color ?? Colors.grey),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+              color: color ?? Colors.black,
+            ),
+          ),
+        ],
       ),
     );
   }
