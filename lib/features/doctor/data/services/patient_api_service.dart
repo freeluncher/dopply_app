@@ -72,18 +72,18 @@ class PatientApiService {
     return false;
   }
 
-  Future<bool> registerPatient(
+  Future<Map<String, dynamic>?> registerPatient(
     Map<String, dynamic> data, {
     void Function(String?)? onError,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/patients/register'),
+        Uri.parse('$_baseUrl/register'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(data),
       );
       if (response.statusCode == 201 || response.statusCode == 200) {
-        return true;
+        return jsonDecode(response.body);
       } else {
         try {
           final res = jsonDecode(response.body);
@@ -91,13 +91,13 @@ class PatientApiService {
             onError(res['message'] ?? 'Gagal mendaftarkan pasien');
         } catch (_) {
           if (onError != null)
-            onError('Gagal mendaftarkan pasien: ${response.body}');
+            onError('Gagal mendaftarkan pasien: ${response.body}');
         }
       }
     } catch (e) {
       if (onError != null) onError('Gagal mendaftarkan pasien: $e');
     }
-    return false;
+    return null;
   }
 
   Future<bool> updatePatient(int patientId, Map<String, dynamic> data) async {
