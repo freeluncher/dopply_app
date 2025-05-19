@@ -12,19 +12,35 @@ class BpmRealtimeChartWidget extends StatelessWidget {
     if (bpmData.isEmpty) {
       return const Center(child: Text('Belum ada data BPM'));
     }
-    // Tampilkan hanya 60 data terakhir
-    final data =
-        bpmData.length > 60 ? bpmData.sublist(bpmData.length - 60) : bpmData;
+    // Tentukan window waktu (misal 60 detik terakhir)
+    final int windowSeconds = 60;
+    final int latestSecond = bpmData.last.time.inSeconds;
+    final int startSecond = (latestSecond - windowSeconds + 1).clamp(
+      0,
+      latestSecond,
+    );
+    // Buat map waktu ke bpm
+    final Map<int, double> timeToBpm = {
+      for (final e in bpmData) e.time.inSeconds: e.bpm.toDouble(),
+    };
+    // Buat list FlSpot untuk setiap detik dalam window
     final List<FlSpot> spots =
-        data
-            .map((e) => FlSpot(e.time.inSeconds.toDouble(), e.bpm.toDouble()))
-            .toList();
+        [
+          for (int t = startSecond; t <= latestSecond; t++)
+            timeToBpm.containsKey(t)
+                ? FlSpot(t.toDouble(), timeToBpm[t]!)
+                : FlSpot.nullSpot,
+        ].where((spot) => !spot.isNull()).toList();
     final minY =
-        (data.map((e) => e.bpm).reduce((a, b) => a < b ? a : b) - 10)
+        (spots.isEmpty
+                ? 60
+                : spots.map((e) => e.y).reduce((a, b) => a < b ? a : b) - 10)
             .clamp(60, 180)
             .toDouble();
     final maxY =
-        (data.map((e) => e.bpm).reduce((a, b) => a > b ? a : b) + 10)
+        (spots.isEmpty
+                ? 120
+                : spots.map((e) => e.y).reduce((a, b) => a > b ? a : b) + 10)
             .clamp(120, 220)
             .toDouble();
     return Card(
@@ -45,7 +61,7 @@ class BpmRealtimeChartWidget extends StatelessWidget {
               child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: SizedBox(
-                  width: (spots.length * 16).clamp(320, 800).toDouble(),
+                  width: (windowSeconds * 12).clamp(320, 800).toDouble(),
                   child: LineChart(
                     LineChartData(
                       minY: minY,
@@ -103,14 +119,10 @@ class BpmRealtimeChartWidget extends StatelessWidget {
                       lineBarsData: [
                         LineChartBarData(
                           spots: spots,
-                          isCurved: true,
+                          isCurved: false, // sharp lines
                           color: Colors.red,
                           barWidth: 3,
                           dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            color: Colors.red.withOpacity(0.08),
-                          ),
                         ),
                       ],
                     ),
@@ -123,15 +135,15 @@ class BpmRealtimeChartWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Min: ${data.map((e) => e.bpm).reduce((a, b) => a < b ? a : b)}',
+                  'Min: ${spots.isEmpty ? '-' : spots.map((e) => e.y.toInt()).reduce((a, b) => a < b ? a : b)}',
                   style: const TextStyle(fontSize: 12),
                 ),
                 Text(
-                  'Max: ${data.map((e) => e.bpm).reduce((a, b) => a > b ? a : b)}',
+                  'Max: ${spots.isEmpty ? '-' : spots.map((e) => e.y.toInt()).reduce((a, b) => a > b ? a : b)}',
                   style: const TextStyle(fontSize: 12),
                 ),
                 Text(
-                  'Terbaru: ${data.last.bpm}',
+                  'Terbaru: ${spots.isEmpty ? '-' : spots.last.y.toInt()}',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,

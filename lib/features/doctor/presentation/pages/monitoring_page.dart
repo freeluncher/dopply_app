@@ -8,9 +8,7 @@ import 'package:dopply_app/features/doctor/presentation/widgets/monitoring_butto
 import 'package:dopply_app/features/doctor/presentation/widgets/monitoring_progress.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/bpm_realtime_chart_widget.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/monitoring_result_card.dart';
-import 'package:dopply_app/features/doctor/presentation/widgets/esp32_bpm_stream_widget.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/esp32_ble_bpm_stream_widget.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 class MonitoringPage extends ConsumerStatefulWidget {
   const MonitoringPage({Key? key}) : super(key: key);
@@ -61,7 +59,10 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                           },
                 ),
                 const SizedBox(height: 16),
-                PatientSummaryCard(selectedPatient: vm.selectedPatient),
+                PatientSummaryCard(
+                  patientName: vm.patientName,
+                  patientId: vm.patientId,
+                ),
                 const SizedBox(height: 16),
                 ESP32ConnectionButton(
                   isConnected: vm.isConnected,
@@ -90,7 +91,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                       backgroundColor: Colors.red,
                     ),
                     onPressed: () async {
-                      vm.stopMonitoring();
+                      vm.stopMonitoring(context);
                     },
                   ),
                 MonitoringProgress(isMonitoring: vm.isMonitoring),
@@ -107,6 +108,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                   doctorNote: vm.doctorNote,
                   onNoteChanged: vm.updateDoctorNote,
                   onSave: () => vm.saveResult(context),
+                  monitoringDone: vm.monitoringDone,
                 ),
               ],
             ),

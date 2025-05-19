@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 
 class PatientSummaryCard extends StatelessWidget {
-  final String selectedPatient;
-  const PatientSummaryCard({Key? key, required this.selectedPatient})
-    : super(key: key);
+  final String patientName;
+  final String patientId;
+  const PatientSummaryCard({
+    Key? key,
+    required this.patientName,
+    required this.patientId,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -14,9 +18,11 @@ class PatientSummaryCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              selectedPatient,
+              patientName,
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 8),
+            Text('ID Pasien: $patientId', style: const TextStyle(fontSize: 14)),
             const SizedBox(height: 8),
             const Text('Data singkat: ...'),
           ],

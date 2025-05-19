@@ -30,7 +30,8 @@ class BpmPoint {
 
 class MonitoringViewModel extends ChangeNotifier {
   int bpm = 120;
-  String selectedPatient = 'Belum ada pasien dipilih';
+  String selectedPatientName = 'Belum ada pasien dipilih';
+  String selectedPatientId = '';
   bool isConnected = false;
   bool isMonitoring = false;
   bool monitoringDone = false;
@@ -38,7 +39,6 @@ class MonitoringViewModel extends ChangeNotifier {
   String? classification; // takikardia/bradikardia/atrial fibrilasi
   String doctorNote = '';
   List<BpmPoint> bpmData = [];
-  String patientId = '001'; // contoh, sebaiknya dari data pasien
   final Ref ref;
   List<Map<String, dynamic>> filteredPatients = [];
   String searchQuery = '';
@@ -50,8 +50,8 @@ class MonitoringViewModel extends ChangeNotifier {
   MonitoringViewModel(this.ref);
 
   void selectPatient({required String patientName, required String patientId}) {
-    selectedPatient = patientName;
-    this.patientId = patientId;
+    selectedPatientName = patientName;
+    selectedPatientId = patientId;
     notifyListeners();
   }
 
@@ -102,25 +102,33 @@ class MonitoringViewModel extends ChangeNotifier {
     startMonitoringESP32();
   }
 
-  void stopMonitoring() async {
+  void stopMonitoring(BuildContext context) async {
     await stopMonitoringESP32();
     isMonitoring = false;
+    notifyListeners();
+    debugPrint('Monitoring stopped. Classifying BPM data...');
+    await classifyBpmData();
+    debugPrint(
+      'Classification result: result=$monitoringResult, class=$classification',
+    );
+    // Do not save to DB yet, just show result and allow doctor to add note
+    monitoringDone = true;
+    notifyListeners();
+  }
+
+  Future<void> saveResult(BuildContext context) async {
+    debugPrint('Saving monitoring record to FastAPI...');
+    await saveMonitoringRecord();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Data BPM berhasil dikirim dan disimpan!')),
+    );
     monitoringDone = false;
+    doctorNote = '';
     notifyListeners();
   }
 
   void updateDoctorNote(String note) {
     doctorNote = note;
-    notifyListeners();
-  }
-
-  void saveResult(BuildContext context) async {
-    // Simpan hasil ke database jika perlu
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Hasil pemeriksaan berhasil disimpan!')),
-    );
-    monitoringDone = false;
-    doctorNote = '';
     notifyListeners();
   }
 
@@ -260,8 +268,14 @@ class MonitoringViewModel extends ChangeNotifier {
   Future<void> saveMonitoringRecord() async {
     final user = ref.read(userProvider);
     final doctorId = user?.doctorId ?? user?.id;
+    int? patientIdInt;
+    try {
+      patientIdInt = int.tryParse(patientId);
+    } catch (_) {
+      patientIdInt = null;
+    }
     final recordData = {
-      'patient_id': patientId,
+      'patient_id': patientIdInt ?? patientId,
       'doctor_id': doctorId,
       'start_time': monitoringStartTime?.toIso8601String(),
       'end_time': DateTime.now().toIso8601String(),
@@ -273,16 +287,19 @@ class MonitoringViewModel extends ChangeNotifier {
       'classification': classification,
       'doctor_note': doctorNote,
     };
+    debugPrint('[saveMonitoringRecord] Data to send: ' + recordData.toString());
     final api = MonitoringApiService();
     try {
       await api.saveRecord(recordData);
-      // Tampilkan notifikasi sukses/gagal jika perlu
       monitoringDone = false;
       notifyListeners();
     } catch (e) {
       debugPrint('Gagal simpan record: $e');
     }
   }
+
+  String get patientName => selectedPatientName;
+  String get patientId => selectedPatientId;
 
   @override
   void dispose() {
