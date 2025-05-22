@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
@@ -46,52 +47,61 @@ class _Esp32BleBpmStreamWidgetState extends State<Esp32BleBpmStreamWidget> {
     if (_device != null) return;
     setState(() => _scanning = true);
     print('[BLE] Mulai scan...');
-    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
-    FlutterBluePlus.scanResults.listen((results) async {
+    late final StreamSubscription<List<ScanResult>> scanSubscription;
+    scanSubscription = FlutterBluePlus.scanResults.listen((results) async {
       for (var r in results) {
         print('[BLE] Device ditemukan: ${r.device.name} - ${r.device.id}');
-        // Cek service UUID pada advertisementData jika ada
         if (r.advertisementData.serviceUuids.contains(serviceUuid) ||
             r.device.name == "Dopply-FetalMonitor" ||
             r.device.id.id == "4C:11:AE:64:FD:62") {
-          // MAC address ESP32 Anda
           print('[BLE] Device cocok, mencoba connect...');
           await FlutterBluePlus.stopScan();
-          _device = r.device;
-          await _device!.connect();
-          print('[BLE] Berhasil connect ke ESP32!');
-          var services = await _device!.discoverServices();
-          for (var s in services) {
-            if (s.uuid.toString() == serviceUuid) {
-              for (var c in s.characteristics) {
-                if (c.uuid.toString() == charUuid) {
-                  await c.setNotifyValue(true);
-                  c.onValueReceived.listen((value) {
-                    try {
-                      final str = utf8.decode(value);
-                      if (str.contains(',')) {
-                        // Format: "<elapsed_ms>,<bpm>"
-                        widget.onBpmReceived(str);
-                        print('[BLE] Data BPM+Time diterima: $str');
-                      } else {
-                        final bpm = int.parse(str);
-                        widget.onBpmReceived(bpm);
-                        print('[BLE] Data BPM diterima: $bpm');
+          await Future.delayed(
+            const Duration(milliseconds: 800),
+          ); // Tambah delay sebelum connect
+          try {
+            _device = r.device;
+            await _device!.connect();
+            print('[BLE] Berhasil connect ke ESP32!');
+            var services = await _device!.discoverServices();
+            for (var s in services) {
+              if (s.uuid.toString() == serviceUuid) {
+                for (var c in s.characteristics) {
+                  if (c.uuid.toString() == charUuid) {
+                    await c.setNotifyValue(true);
+                    c.onValueReceived.listen((value) {
+                      try {
+                        final str = utf8.decode(value);
+                        if (str.contains(',')) {
+                          widget.onBpmReceived(str);
+                          print('[BLE] Data BPM+Time diterima: $str');
+                        } else {
+                          final bpm = int.parse(str);
+                          widget.onBpmReceived(bpm);
+                          print('[BLE] Data BPM diterima: $bpm');
+                        }
+                      } catch (e) {
+                        print('[BLE] Error parsing BPM: $e');
                       }
-                    } catch (e) {
-                      print('[BLE] Error parsing BPM: $e');
-                    }
-                  });
-                  setState(() => _scanning = false);
-                } else if (c.uuid.toString() == commandCharUuid) {
-                  _commandChar = c;
+                    });
+                    setState(() => _scanning = false);
+                  } else if (c.uuid.toString() == commandCharUuid) {
+                    _commandChar = c;
+                  }
                 }
               }
             }
+          } catch (e) {
+            print('[BLE] ERROR connect: $e');
+            _device = null;
+            setState(() => _scanning = false);
           }
+          await scanSubscription.cancel();
+          break;
         }
       }
     });
+    await FlutterBluePlus.startScan(timeout: const Duration(seconds: 5));
   }
 
   Future<void> _disconnect() async {

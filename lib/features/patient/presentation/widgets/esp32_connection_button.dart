@@ -19,10 +19,8 @@ class ESP32ConnectionButton extends StatelessWidget {
     BuildContext context,
     VoidCallback onConnect,
   ) async {
-    // Cek status Bluetooth dengan adapterStateNow
     final state = FlutterBluePlus.adapterStateNow;
     if (state != BluetoothAdapterState.on) {
-      // Minta izin Bluetooth
       final status = await Permission.bluetooth.request();
       if (!status.isGranted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -32,31 +30,14 @@ class ESP32ConnectionButton extends StatelessWidget {
         );
         return;
       }
-      // Coba aktifkan Bluetooth (Android only)
       try {
         await FlutterBluePlus.turnOn();
       } catch (_) {}
-      // Tunggu sampai Bluetooth benar-benar ON
       await FlutterBluePlus.adapterState
           .where((s) => s == BluetoothAdapterState.on)
           .first;
     }
-    // Tambahkan delay sebelum connect BLE (hindari error 133)
-    await Future.delayed(const Duration(milliseconds: 800));
-    // Retry logic untuk koneksi BLE (maks 3x)
-    int retry = 0;
-    while (retry < 3) {
-      try {
-        // Jalankan onConnect, support async jika perlu
-        final future = Future.sync(() => onConnect());
-        await future;
-        break;
-      } catch (e) {
-        retry++;
-        if (retry >= 3) rethrow;
-        await Future.delayed(const Duration(seconds: 1));
-      }
-    }
+    onConnect();
   }
 
   @override
