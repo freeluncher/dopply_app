@@ -48,4 +48,80 @@ class AccountApiServiceAdmin {
     }
     return false;
   }
+
+  Future<List<Map<String, dynamic>>?> getUsers() async {
+    final token = await AuthLocalDataSource().getToken();
+    if (token == null) return null;
+    try {
+      final response = await http.get(
+        Uri.parse('$_baseUrl/admin/users'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      if (response.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(jsonDecode(response.body));
+      }
+    } catch (e) {
+      print('[AccountApiServiceAdmin] getUsers Exception: $e');
+    }
+    return null;
+  }
+
+  Future<bool> createUser(Map<String, dynamic> userData) async {
+    final token = await AuthLocalDataSource().getToken();
+    if (token == null) return false;
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/admin/users'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(userData),
+      );
+      return response.statusCode == 201;
+    } catch (e) {
+      print('[AccountApiServiceAdmin] createUser Exception: $e');
+    }
+    return false;
+  }
+
+  Future<bool> updateUser(String userId, Map<String, dynamic> userData) async {
+    final token = await AuthLocalDataSource().getToken();
+    if (token == null) return false;
+    try {
+      final response = await http.put(
+        Uri.parse('$_baseUrl/admin/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode(userData),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[AccountApiServiceAdmin] updateUser Exception: $e');
+    }
+    return false;
+  }
+
+  Future<bool> deleteUser(String userId) async {
+    final token = await AuthLocalDataSource().getToken();
+    if (token == null) return false;
+    try {
+      final response = await http.delete(
+        Uri.parse('$_baseUrl/admin/users/$userId'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('[AccountApiServiceAdmin] deleteUser Exception: $e');
+    }
+    return false;
+  }
 }

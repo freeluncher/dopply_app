@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dopply_app/features/auth/presentation/pages/login_page.dart'; // Import loginStatusProvider
 import 'doctor_validation_provider.dart';
+import 'package:dopply_app/features/admin/presentation/pages/user_management_page.dart';
 
 class AdminDashboard extends ConsumerWidget {
   const AdminDashboard({Key? key}) : super(key: key);
@@ -113,6 +114,18 @@ class AdminDashboard extends ConsumerWidget {
                     onPressed: () {
                       context.push('/account-settings');
                     },
+                  ),
+                  SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => UserManagementPage(),
+                        ),
+                      );
+                    },
+                    child: Text('User Management'),
                   ),
                   // ...tambahkan menu lain sesuai kebutuhan...
                 ],
