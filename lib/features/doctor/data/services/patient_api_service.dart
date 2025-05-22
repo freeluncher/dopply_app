@@ -55,51 +55,6 @@ class PatientApiService {
     return false;
   }
 
-  Future<bool> addPatientByDoctor(Map<String, dynamic> data) async {
-    final token = await AuthLocalDataSource().getToken();
-    if (token == null) return false;
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/patients/by-doctor'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode(data),
-      );
-      return response.statusCode == 201 || response.statusCode == 200;
-    } catch (e) {}
-    return false;
-  }
-
-  Future<Map<String, dynamic>?> registerPatient(
-    Map<String, dynamic> data, {
-    void Function(String?)? onError,
-  }) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(data),
-      );
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        try {
-          final res = jsonDecode(response.body);
-          if (onError != null)
-            onError(res['message'] ?? 'Gagal mendaftarkan pasien');
-        } catch (_) {
-          if (onError != null)
-            onError('Gagal mendaftarkan pasien: ${response.body}');
-        }
-      }
-    } catch (e) {
-      if (onError != null) onError('Gagal mendaftarkan pasien: $e');
-    }
-    return null;
-  }
-
   Future<bool> updatePatient(int patientId, Map<String, dynamic> data) async {
     final token = await AuthLocalDataSource().getToken();
     if (token == null) return false;

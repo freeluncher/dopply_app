@@ -144,19 +144,6 @@ class MonitoringViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addNewPatient({
-    required String name,
-    required String email,
-    required String phone,
-  }) async {
-    final api = PatientApiService();
-    final data = {'name': name, 'email': email, 'phone': phone};
-    final success = await api.addPatientByDoctor(data);
-    if (!success) {
-      throw Exception('Gagal menambah pasien. Email mungkin sudah terdaftar.');
-    }
-  }
-
   Future<void> addNewPatientAndAssignToDoctor({
     required String name,
     required String email,
@@ -170,28 +157,31 @@ class MonitoringViewModel extends ChangeNotifier {
     final data = {
       'name': name,
       'email': email,
-      'password': '',
-      'role': 'patient',
       if (phone != null) 'phone': phone,
       if (birthDate != null) 'birth_date': birthDate,
       if (address != null) 'address': address,
       if (medicalNote != null) 'medical_note': medicalNote,
     };
-    final newPatient = await api.registerPatient(data, onError: onError);
-    if (newPatient == null) {
+    // 1. Tambah pasien
+    final addSuccess = await api.addPatient(data);
+    if (!addSuccess) {
       throw Exception('Gagal menambah pasien. Email mungkin sudah terdaftar.');
     }
-    // Assign ke dokter yang login
+    // 2. Cari pasien baru (by email)
+    final allPatients = await api.getAllPatients();
+    final newPatient = allPatients.firstWhere(
+      (p) => p['email'] == email,
+      orElse: () => throw Exception('Pasien baru tidak ditemukan!'),
+    );
     final user = ref.read(userProvider);
     final doctorId = user?.doctorId ?? user?.id;
     if (doctorId == null) {
       throw Exception('Gagal assign pasien: doctorId tidak ditemukan!');
     }
-    final assignSuccess = await api.assignPatientToDoctorByEmail(
-      doctorId: int.parse(doctorId.toString()),
-      email: newPatient['email'] ?? email,
+    final assignSuccess = await api.assignPatientToDoctor(
+      int.parse(doctorId.toString()),
+      newPatient['id'],
       status: 'active',
-      onError: onError,
     );
     if (!assignSuccess) {
       throw Exception('Gagal assign pasien ke dokter!');
@@ -276,21 +266,22 @@ class MonitoringViewModel extends ChangeNotifier {
     }
     final recordData = {
       'patient_id': patientIdInt ?? patientId,
-      'doctor_id': doctorId,
-      'start_time': monitoringStartTime?.toIso8601String(),
-      'end_time': DateTime.now().toIso8601String(),
       'bpm_data':
           bpmDataForChart
               .map((e) => {'time': e.time.inSeconds, 'bpm': e.bpm})
               .toList(),
-      'result': monitoringResult,
-      'classification': classification,
       'doctor_note': doctorNote,
+      'doctor_id': doctorId,
     };
     debugPrint('[saveMonitoringRecord] Data to send: ' + recordData.toString());
     final api = MonitoringApiService();
     try {
-      await api.saveRecord(recordData);
+      await api.sendMonitoringResult(
+        patientId: (patientIdInt ?? patientId).toString(),
+        bpmData: bpmDataForChart.map((e) => e.bpm).toList(),
+        doctorNote: doctorNote,
+        doctorId: doctorId?.toString(),
+      );
       monitoringDone = false;
       notifyListeners();
     } catch (e) {

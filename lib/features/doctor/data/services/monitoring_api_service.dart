@@ -93,21 +93,4 @@ class MonitoringApiService {
     }
     return null;
   }
-
-  // Save monitoring record to FastAPI
-  Future<bool> saveRecord(Map<String, dynamic> data) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/monitoring_record'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(data),
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return true;
-      }
-    } catch (e) {
-      print('Error saveRecord: $e');
-    }
-    return false;
-  }
 }
