@@ -17,6 +17,7 @@ import '../features/admin/presentation/pages/manage_users_page.dart';
 import '../features/doctor/presentation/pages/doctor_patients_page.dart';
 import '../features/patient/presentation/pages/monitoring_page_patient.dart';
 import 'package:dopply_app/features/patient/presentation/pages/monitoring_history_page_patient.dart';
+import 'package:dopply_app/features/patient/presentation/pages/account_settings_page_patient.dart';
 // import fitur lain sesuai kebutuhan...
 import '../features/auth/presentation/viewmodels/user_provider.dart';
 import '../core/services/auth_guard_service.dart';
@@ -102,9 +103,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/patient/account-settings',
-        builder:
-            (context, state) =>
-                Scaffold(body: Center(child: Text('Account Settings'))),
+        builder: (context, state) => const AccountSettingsPagePatient(),
       ),
       GoRoute(
         path: '/account-settings',
