@@ -32,6 +32,7 @@ class _Esp32BleBpmStreamWidgetState extends State<Esp32BleBpmStreamWidget> {
   BluetoothDevice? _device;
   BluetoothCharacteristic? _commandChar;
   bool _scanning = false;
+  bool _disposed = false;
   final String serviceUuid = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
   final String charUuid = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
   final String commandCharUuid = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
@@ -111,7 +112,7 @@ class _Esp32BleBpmStreamWidgetState extends State<Esp32BleBpmStreamWidget> {
       print('[BLE] Disconnected.');
     }
     _device = null;
-    if (mounted) {
+    if (mounted && !_disposed) {
       setState(() {});
     }
   }
@@ -131,11 +132,10 @@ class _Esp32BleBpmStreamWidgetState extends State<Esp32BleBpmStreamWidget> {
 
   @override
   void dispose() {
+    _disposed = true;
     widget.controller?._state = null;
-    // Hindari _disconnect jika sudah tidak mounted
-    if (mounted) {
-      _disconnect();
-    }
+    // Do not call async _disconnect in dispose
+    _device = null;
     super.dispose();
   }
 

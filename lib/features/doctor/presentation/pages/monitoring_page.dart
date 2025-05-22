@@ -141,12 +141,14 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                       },
                     ),
                   MonitoringProgress(isMonitoring: vm.isMonitoring),
-                  Esp32BleBpmStreamWidget(
-                    controller: _bleController!,
-                    onBpmReceived: (bpm) {
-                      vm.updateBpmFromEsp32(bpm);
-                    },
-                  ),
+                  _bleController != null
+                      ? Esp32BleBpmStreamWidget(
+                        controller: _bleController!,
+                        onBpmReceived: (bpm) {
+                          vm.updateBpmFromEsp32(bpm);
+                        },
+                      )
+                      : const SizedBox.shrink(),
                   BpmRealtimeChartWidget(bpmData: vm.bpmDataForChart),
                   MonitoringResultCard(
                     monitoringResult: vm.monitoringResult,

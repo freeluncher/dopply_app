@@ -3,6 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/router.dart';
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+  };
+  WidgetsBinding.instance.platformDispatcher.onError = (error, stack) {
+    print('UNCAUGHT ASYNC ERROR:');
+    print(error);
+    print(stack);
+    return true;
+  };
   runApp(const ProviderScope(child: MyApp()));
 }
 
