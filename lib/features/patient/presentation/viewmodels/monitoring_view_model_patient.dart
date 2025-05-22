@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../features/doctor/presentation/widgets/esp32_ble_bpm_stream_widget.dart';
+import '../../data/services/monitoring_api_service_patient.dart';
 
 class BpmPoint {
   final Duration time;
@@ -124,13 +125,32 @@ class MonitoringViewModelPatient extends ChangeNotifier {
   }
 
   Future<void> saveResult(BuildContext context) async {
-    // TODO: Kirim data ke database (API call)
+    // Kirim data ke backend (API call)
     debugPrint(
-      '[PATIENT] Simpan hasil: nama=$_patientName, id=$_patientId, bpmData=${bpmData.length}',
+      '[PATIENT] Simpan hasil: nama=$_patientName, id=$_patientId, bpmData=bpmData.length}',
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Hasil monitoring berhasil disimpan!')),
+    final api = MonitoringApiServicePatient();
+    final bpmDataList =
+        bpmData.map((e) => {'time': e.time.inSeconds, 'bpm': e.bpm}).toList();
+    final success = await api.sendMonitoringResultPatient(
+      patientId: _patientId,
+      bpmData: bpmDataList,
+      classification: classification,
+      monitoringResult: monitoringResult,
     );
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Hasil monitoring berhasil disimpan ke server!'),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menyimpan hasil monitoring ke server!'),
+        ),
+      );
+    }
     monitoringDone = false;
     notifyListeners();
   }
