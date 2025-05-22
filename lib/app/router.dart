@@ -1,3 +1,48 @@
+// ============================================================================
+// router.dart
+//
+// File ini berisi konfigurasi routing utama aplikasi Dopply App menggunakan
+// package go_router dan Riverpod. Semua halaman utama (admin, dokter, pasien)
+// serta halaman login, register, dan pengaturan akun diatur di sini.
+//
+// Fitur utama:
+// - Routing berbasis path dan nama route
+// - Guard/redirect otomatis berdasarkan status autentikasi dan role user
+// - Modular: mudah menambah/mengedit rute baru
+//
+// Struktur route:
+//   '/'                       : SplashScreen
+//   '/login'                  : LoginPage
+//   '/register'               : RegisterPage
+//   '/adminDashboard'         : AdminDashboard
+//   '/admin/users'            : ManageUsersPage (manajemen user admin)
+//   '/doctorDashboard'        : DoctorDashboard
+//   '/doctor/monitoring'      : MonitoringPage (dokter)
+//   '/doctor/patient-history' : PatientHistoryPage (dokter)
+//   '/doctor/patient-history/:id' : PatientHistoryDetailPage (dokter)
+//   '/doctor/patients'        : DoctorPatientsPage
+//   '/patientDashboard'       : PatientDashboard
+//   '/patient/self-monitoring': MonitoringPagePatient
+//   '/patient/history'        : MonitoringHistoryPagePatient
+//   '/patient/account-settings': AccountSettingsPagePatient
+//   '/account-settings'       : AccountSettingsPage (umum)
+//
+// Guard/redirect:
+//   - Menggunakan AuthGuardService.canAccess untuk membatasi akses halaman
+//     sesuai status login dan role user.
+//
+// Cara menambah route baru:
+//   1. Import halaman baru di bagian atas file ini.
+//   2. Tambahkan GoRoute baru ke dalam list routes.
+//   3. (Opsional) Tambahkan nama route untuk navigasi lebih mudah.
+//
+// Contoh navigasi:
+//   context.go('/adminDashboard'); // replace
+//   context.push('/admin/users');  // push ke stack
+//
+// Untuk penggunaan di main.dart, gunakan routerProvider dari Riverpod.
+// ============================================================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
