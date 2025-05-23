@@ -1,0 +1,5 @@
+{
+  "version": "1.0.1",
+  "apk_url": "https://drive.google.com/uc?export=download&id=YOUR_APK_FILE_ID",
+  "changelog": "- Perbaikan bug koneksi BLE\n- Peningkatan stabilitas monitoring\n- UI lebih responsif"
+}

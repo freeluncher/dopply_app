@@ -12,6 +12,11 @@ class PatientPickerDialog extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final patientsAsync = ref.watch(patientsByDoctorProvider);
     final vm = ref.watch(monitoringViewModelProvider);
+    // Pastikan filteredPatients selalu up-to-date jika searchQuery kosong
+    final filteredPatients =
+        vm.searchQuery.isEmpty
+            ? (patientsAsync.value ?? [])
+            : vm.filteredPatients;
     return AlertDialog(
       title: const Text('Pilih Pasien'),
       content: SizedBox(
@@ -34,8 +39,7 @@ class PatientPickerDialog extends ConsumerWidget {
             const SizedBox(height: 12),
             patientsAsync.when(
               data: (patients) {
-                final filtered =
-                    vm.searchQuery.isEmpty ? patients : vm.filteredPatients;
+                final filtered = filteredPatients;
                 if (filtered.isEmpty) {
                   return const Text('Tidak ada pasien ditemukan.');
                 }
@@ -52,10 +56,10 @@ class PatientPickerDialog extends ConsumerWidget {
                           ref
                               .read(monitoringViewModelProvider)
                               .selectPatient(
-                                patientName: p['name'] ?? '-',
-                                patientId:
+                                id:
                                     (p['patient_id'] ?? p['id'] ?? '')
                                         .toString(),
+                                name: p['name'] ?? '-',
                               );
                           Navigator.of(context).pop();
                         },

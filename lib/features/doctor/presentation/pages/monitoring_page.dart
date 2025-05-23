@@ -30,25 +30,24 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
           .read(monitoringViewModelProvider.notifier)
           .setBleController(_bleController!);
     });
+    // Hapus cek update dari halaman ini
   }
 
   @override
   void dispose() {
-    debugPrint('[MONITORING_PAGE] dispose dipanggil pada ${DateTime.now()}');
-    final notifier = ref.read(monitoringViewModelProvider.notifier);
-    final vm = ref.read(monitoringViewModelProvider);
-    debugPrint(
-      '[MONITORING_PAGE] Sebelum reset: isMonitoring=${vm.isMonitoring}, isConnected=${vm.isConnected}',
-    );
-    if (vm.isMonitoring) {
-      notifier.stopMonitoringESP32();
-    }
-    if (vm.isConnected) {
-      _bleController?.disconnect();
-      notifier.disconnectESP32(silent: true);
-    }
-    notifier.resetAllMonitoringState();
-    _bleController = null; // pastikan controller dihapus
+    try {
+      final notifier = ref.read(monitoringViewModelProvider.notifier);
+      final vm = ref.read(monitoringViewModelProvider);
+      if (vm.isMonitoring) {
+        notifier.stopMonitoringESP32();
+      }
+      if (vm.isConnected) {
+        _bleController?.disconnect();
+        notifier.disconnectESP32();
+      }
+      notifier.resetAllMonitoringState();
+    } catch (_) {}
+    _bleController = null;
     super.dispose();
   }
 
@@ -69,7 +68,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
         }
         if (vm.isConnected) {
           _bleController?.disconnect();
-          notifier.disconnectESP32(silent: true);
+          notifier.disconnectESP32();
         }
         notifier.resetAllMonitoringState();
         _bleController = null;
@@ -122,6 +121,18 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
                       vm.disconnectESP32();
                     },
                   ),
+                  // Tampilkan feedback error BLE jika ada
+                  if (vm.bleError != null && vm.bleError!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        vm.bleError!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   MonitoringButton(
                     isConnected: vm.isConnected,

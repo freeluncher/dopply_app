@@ -64,18 +64,27 @@ class ESP32ConnectionButton extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: ElevatedButton.icon(
-            icon: Icon(isConnected ? Icons.usb_off : Icons.usb),
-            label: Text(isConnected ? 'Disconnect ESP32' : 'Connect ESP32'),
-            onPressed:
-                isMonitoring
-                    ? null
-                    : isConnected
-                    ? onDisconnect
-                    : () => _handleConnectESP32(context, onConnect),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isConnected ? Colors.red : null,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ElevatedButton.icon(
+                icon: Icon(isConnected ? Icons.usb_off : Icons.usb),
+                label: Text(isConnected ? 'Disconnect ESP32' : 'Connect ESP32'),
+                onPressed:
+                    isMonitoring
+                        ? null
+                        : isConnected
+                        ? onDisconnect
+                        : () => _handleConnectESP32(context, onConnect),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isConnected ? Colors.red : null,
+                ),
+              ),
+              // Feedback error BLE sebaiknya ditampilkan di parent (MonitoringPage),
+              // jadi bagian ini cukup return SizedBox.shrink saja.
+              // Jika ingin menampilkan error di sini, tambahkan parameter error ke widget ini.
+              const SizedBox.shrink(),
+            ],
           ),
         ),
       ],

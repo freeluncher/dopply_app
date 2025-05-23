@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:dopply_app/features/doctor/presentation/viewmodels/monitoring_view_model.dart';
+import 'package:dopply_app/features/doctor/presentation/viewmodels/bpm_point.dart';
 
 class BpmRealtimeChartWidget extends StatelessWidget {
   final List<BpmPoint> bpmData;
-  const BpmRealtimeChartWidget({Key? key, required this.bpmData})
-    : super(key: key);
+  const BpmRealtimeChartWidget({super.key, required this.bpmData});
 
   @override
   Widget build(BuildContext context) {

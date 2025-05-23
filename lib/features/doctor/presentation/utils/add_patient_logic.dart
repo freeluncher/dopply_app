@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../viewmodels/monitoring_view_model.dart';
+import 'package:dopply_app/features/doctor/data/services/patient_api_service.dart';
+import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
 
 Future<void> submitAddNewPatient({
   required BuildContext context,
@@ -19,25 +20,36 @@ Future<void> submitAddNewPatient({
   setLoading(true);
   setError(null);
   try {
-    await ref
-        .read(monitoringViewModelProvider)
-        .addNewPatientAndAssignToDoctor(
-          name: nameController.text,
-          email: emailController.text,
-          birthDate:
-              birthDateController.text.isNotEmpty
-                  ? birthDateController.text
-                  : null,
-          address:
-              addressController.text.isNotEmpty ? addressController.text : null,
-          medicalNote:
-              medicalNoteController.text.isNotEmpty
-                  ? medicalNoteController.text
-                  : null,
-          onError: (err) => setError(err),
-        );
+    // Gunakan PatientApiService langsung, bukan monitoringViewModelProvider
+    final user = ref.read(userProvider);
+    final doctorId = int.parse((user?.doctorId ?? user?.id).toString());
+    final api = PatientApiService();
+    final addResult = await api.addPatient({
+      'name': nameController.text,
+      'email': emailController.text,
+      if (birthDateController.text.isNotEmpty)
+        'birth_date': birthDateController.text,
+      if (addressController.text.isNotEmpty) 'address': addressController.text,
+      if (medicalNoteController.text.isNotEmpty)
+        'medical_note': medicalNoteController.text,
+    });
+    if (!addResult) {
+      setLoading(false);
+      setError('Gagal menambah pasien baru.');
+      return;
+    }
+    // Assign ke dokter
+    final assignResult = await api.assignPatientToDoctorByEmail(
+      doctorId: doctorId,
+      email: emailController.text,
+      onError: (err) => setError(err),
+    );
     setLoading(false);
-    onSuccess();
+    if (assignResult) {
+      onSuccess();
+    } else {
+      setError('Gagal assign pasien ke dokter.');
+    }
   } catch (e) {
     setLoading(false);
     setError(e.toString());

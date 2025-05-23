@@ -8,9 +8,8 @@ import 'package:dopply_app/features/doctor/presentation/widgets/esp32_ble_bpm_st
 import 'package:dopply_app/features/patient/presentation/widgets/patient_summary_card_patient.dart';
 import 'package:dopply_app/features/patient/presentation/widgets/esp32_connection_button.dart'
     as patient_btn;
-import 'package:dopply_app/features/doctor/presentation/viewmodels/monitoring_view_model.dart'
-    as doctor_vm
-    show BpmPoint;
+import 'package:dopply_app/features/doctor/presentation/viewmodels/bpm_point.dart'
+    as doctor_bpm;
 import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
 
 class MonitoringPagePatient extends ConsumerStatefulWidget {
@@ -60,7 +59,7 @@ class _MonitoringPagePatientState extends ConsumerState<MonitoringPagePatient> {
     }
     if (vm.isConnected) {
       _bleController?.disconnect();
-      notifier.disconnectESP32(silent: true);
+      notifier.disconnectESP32();
     }
     notifier.resetAllMonitoringState();
     _bleController = null;
@@ -90,7 +89,7 @@ class _MonitoringPagePatientState extends ConsumerState<MonitoringPagePatient> {
         }
         if (vm.isConnected) {
           _bleController?.disconnect();
-          notifier.disconnectESP32(silent: true);
+          notifier.disconnectESP32();
         }
         notifier.resetAllMonitoringState();
         _bleController = null;
@@ -179,7 +178,9 @@ class _MonitoringPagePatientState extends ConsumerState<MonitoringPagePatient> {
                         BpmRealtimeChartWidget(
                           bpmData:
                               vm.bpmDataForChart
-                                  .map((e) => doctor_vm.BpmPoint(e.time, e.bpm))
+                                  .map(
+                                    (e) => doctor_bpm.BpmPoint(e.time, e.bpm),
+                                  )
                                   .toList(),
                         ),
                       ],

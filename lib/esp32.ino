@@ -82,8 +82,8 @@ class MyServerCallbacks: public BLEServerCallbacks {
       lcd.setCursor(0, 0);
       lcd.print("Terputus BLE");
       Serial.println("[ESP32] BLE device disconnected");
-      delay(1000);
-      ESP.restart();
+      // delay(1000);
+      // ESP.restart(); // Dihilangkan agar tidak restart otomatis, lebih smooth reconnect
     }
 };
 
