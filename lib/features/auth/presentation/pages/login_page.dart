@@ -7,6 +7,7 @@ import '../../domain/entities/user.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 final loginStatusProvider = StateProvider<String?>((ref) => null);
 
@@ -24,17 +25,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   void initState() {
     super.initState();
-    // Cek update aplikasi saat halaman login dibuka
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkForUpdate(context);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final info = await PackageInfo.fromPlatform();
+      _checkForUpdate(context, info.version);
     });
   }
 
-  Future<void> _checkForUpdate(BuildContext context) async {
+  Future<void> _checkForUpdate(
+    BuildContext context,
+    String currentVersion,
+  ) async {
     const String updateInfoUrl =
-        'https://drive.google.com/uc?export=download&id=YOUR_JSON_FILE_ID'; // Ganti dengan file JSON Google Drive Anda
-    const String currentVersion =
-        '1.0.0'; // Ganti dengan versi aplikasi Anda saat ini
+        'https://drive.google.com/uc?export=download&id=1PNmL0Dg6TDOp6l-igmFqw9eP_COLTlqTc'; // Ganti dengan file JSON Google Drive Anda
     try {
       final response = await http.get(Uri.parse(updateInfoUrl));
       if (response.statusCode == 200) {

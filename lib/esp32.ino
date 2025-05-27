@@ -19,6 +19,7 @@ unsigned long currentTime = 0;
 int bpm = 0;
 bool beatDetected = false;
 unsigned long beatTimeout = 3000; // 3 detik tanpa detak → BPM = 0
+unsigned long monitoringStartTime = 0;
 
 // BLE DEFINITIONS
 #define LED_BUILTIN 2
@@ -74,6 +75,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
       lcd.setCursor(0, 0);
       lcd.print("Terhubung BLE");
       Serial.println("[ESP32] BLE device connected");
+      Serial.println("[ESP32] STATUS: CONNECTED");
     };
     void onDisconnect(BLEServer* pServer) {
       bleDeviceConnected = false;
@@ -82,6 +84,7 @@ class MyServerCallbacks: public BLEServerCallbacks {
       lcd.setCursor(0, 0);
       lcd.print("Terputus BLE");
       Serial.println("[ESP32] BLE device disconnected");
+      Serial.println("[ESP32] STATUS: DISCONNECTED");
       // delay(1000);
       // ESP.restart(); // Dihilangkan agar tidak restart otomatis, lebih smooth reconnect
     }
@@ -150,6 +153,7 @@ void setup() {
   lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.print("Ready");
+  Serial.println("[ESP32] STATUS: STANDBY");
 
   // BLE INIT
   BLEDevice::init("Dopply-FetalMonitor");
