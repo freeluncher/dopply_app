@@ -4,7 +4,7 @@ import '../viewmodels/monitoring_view_model_patient.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/monitoring_button.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/monitoring_progress.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/bpm_realtime_chart_widget.dart';
-import 'package:dopply_app/features/doctor/presentation/widgets/esp32_ble_bpm_stream_widget.dart';
+import 'package:dopply_app/features/patient/presentation/widgets/esp32_ble_bpm_stream_widget.dart';
 import 'package:dopply_app/features/patient/presentation/widgets/patient_summary_card_patient.dart';
 import 'package:dopply_app/features/patient/presentation/widgets/esp32_connection_button.dart'
     as patient_btn;
@@ -125,14 +125,26 @@ class _MonitoringPagePatientState extends ConsumerState<MonitoringPagePatient> {
                         '[MonitoringPagePatient] ESP32ConnectionButton onConnect',
                       );
                       _bleController?.connect();
+                      debugPrint(
+                        '[MonitoringPagePatient] _bleController.connect() dipanggil',
+                      );
                       vm.connectESP32();
+                      debugPrint(
+                        '[MonitoringPagePatient] vm.connectESP32() dipanggil',
+                      );
                     },
                     onDisconnect: () {
                       debugPrint(
                         '[MonitoringPagePatient] ESP32ConnectionButton onDisconnect',
                       );
                       _bleController?.disconnect();
+                      debugPrint(
+                        '[MonitoringPagePatient] _bleController.disconnect() dipanggil',
+                      );
                       vm.disconnectESP32();
+                      debugPrint(
+                        '[MonitoringPagePatient] vm.disconnectESP32() dipanggil',
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -220,6 +232,25 @@ class _MonitoringPagePatientState extends ConsumerState<MonitoringPagePatient> {
                         ),
                       ),
                     ),
+                  // Tambahkan log saat widget BLE di-render
+                  Builder(
+                    builder: (context) {
+                      debugPrint(
+                        '[MonitoringPagePatient] Esp32BleBpmStreamWidget rendered, controller: \\${_bleController != null}',
+                      );
+                      return _bleController != null
+                          ? Esp32BleBpmStreamWidget(
+                            controller: _bleController!,
+                            onBpmReceived: (bpm) {
+                              debugPrint(
+                                '[MonitoringPagePatient] onBpmReceived: \\${bpm.toString()}',
+                              );
+                              vm.updateBpmFromEsp32(bpm);
+                            },
+                          )
+                          : const SizedBox.shrink();
+                    },
+                  ),
                 ],
               ),
             ),
