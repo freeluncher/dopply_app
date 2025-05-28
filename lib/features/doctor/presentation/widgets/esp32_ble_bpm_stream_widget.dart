@@ -150,7 +150,10 @@ class _Esp32BleBpmStreamWidgetState extends State<Esp32BleBpmStreamWidget> {
     if (_device != null) {
       print('[BLE] Disconnect dari ESP32...');
       await _device?.disconnect();
-      print('[BLE] Disconnected.');
+      print(
+        '[BLE] Disconnected. Menunggu 500ms untuk memastikan disconnect...',
+      );
+      await Future.delayed(const Duration(milliseconds: 500));
     }
     _device = null;
     if (mounted && !_disposed) {
