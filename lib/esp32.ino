@@ -53,8 +53,23 @@ void setup() {
   Serial.println("[ESP32] BLE advertising started");
 }
 
+int lastBpmSent = 0;
+unsigned long lastSendTime = 0;
+
 void loop() {
   // Tidak ada logic sensor/monitoring, hanya BLE connect/disconnect
   delay(100);
+  if (bleDeviceConnected) {
+    unsigned long now = millis();
+    if (now - lastSendTime > 1000) { // setiap 1 detik
+      int bpm = random(110, 160); // simulasi BPM janin
+      String bpmStr = String(bpm);
+      pCharacteristic->setValue(bpmStr.c_str());
+      pCharacteristic->notify();
+      Serial.print("[ESP32] Send BPM: ");
+      Serial.println(bpmStr);
+      lastSendTime = now;
+    }
+  }
 }
 
