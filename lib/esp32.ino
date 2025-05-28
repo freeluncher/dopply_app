@@ -22,14 +22,30 @@ class MyServerCallbacks: public BLEServerCallbacks {
       digitalWrite(LED_BUILTIN, HIGH); // LED biru ON
       Serial.println("[ESP32] BLE device connected");
       Serial.println("[ESP32] STATUS: CONNECTED");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("BLE: CONNECTED   ");
+      lcd.setCursor(0, 1);
+      lcd.print("Dopply Monitor   ");
     }
     void onDisconnect(BLEServer* pServer) {
       bleDeviceConnected = false;
       digitalWrite(LED_BUILTIN, LOW); // LED biru OFF
       Serial.println("[ESP32] BLE device disconnected");
       Serial.println("[ESP32] STATUS: DISCONNECTED");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("BLE: DISCONNECT ");
+      lcd.setCursor(0, 1);
+      lcd.print("Wait/Scan Again ");
       pServer->getAdvertising()->start(); // Restart advertising
       Serial.println("[ESP32] BLE advertising restarted");
+      delay(500); // Tampilkan status sebentar
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("BLE: ADVERTISING");
+      lcd.setCursor(0, 1);
+      lcd.print("Dopply Monitor   ");
     }
 };
 
@@ -37,6 +53,13 @@ void setup() {
   Serial.begin(9600);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, LOW);
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("BLE: STANDBY    ");
+  lcd.setCursor(0, 1);
+  lcd.print("Dopply Monitor  ");
   Serial.println("[ESP32] STATUS: STANDBY");
 
   BLEDevice::init("Dopply-FetalMonitor");
@@ -51,6 +74,11 @@ void setup() {
   pService->start();
   pServer->getAdvertising()->start();
   Serial.println("[ESP32] BLE advertising started");
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("BLE: ADVERTISING");
+  lcd.setCursor(0, 1);
+  lcd.print("Dopply Monitor   ");
 }
 
 int lastBpmSent = 0;
