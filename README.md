@@ -1,47 +1,54 @@
 # Dopply App
 
-Aplikasi Monitoring Fetal BPM Berbasis Flutter
+[![Flutter](https://img.shields.io/badge/Flutter-3.7.0-blue?logo=flutter)](https://flutter.dev)
+[![Build](https://img.shields.io/github/actions/workflow/status/freeluncher/dopply_app/flutter.yml?branch=main&label=build)](../../actions)
+[![License](https://img.shields.io/github/license/freeluncher/dopply_app)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Android%20%7C%20iOS-green)](../../)
+[![Pub](https://img.shields.io/pub/v/flutter_blue_plus?label=flutter_blue_plus)](https://pub.dev/packages/flutter_blue_plus)
+[![Coverage](https://img.shields.io/badge/coverage-auto-brightgreen)](coverage/lcov.info)
+[![Issues](https://img.shields.io/github/issues/freeluncher/dopply_app)](../../issues)
+[![Stars](https://img.shields.io/github/stars/freeluncher/dopply_app?style=social)](../../stargazers)
+[![Forks](https://img.shields.io/github/forks/freeluncher/dopply_app?style=social)](../../network/members)
+[![Last Commit](https://img.shields.io/github/last-commit/freeluncher/dopply_app)](../../commits/main)
 
 ---
 
-## Deskripsi
-Dopply App adalah aplikasi mobile berbasis Flutter yang digunakan untuk monitoring detak jantung janin (fetal BPM) menggunakan perangkat ESP32 BLE. Aplikasi ini mendukung tiga peran utama: **Pasien**, **Dokter**, dan **Admin**. Setiap peran memiliki fitur dan akses yang berbeda sesuai kebutuhan monitoring dan manajemen data.
+Aplikasi monitoring detak jantung janin (Fetal BPM) berbasis Flutter, terintegrasi ESP32 BLE, dengan fitur multi-role: **Admin**, **Dokter**, dan **Pasien**. Mendukung monitoring real-time, manajemen user, dan update aplikasi via Google Drive.
 
 ---
 
-## Fitur Utama
-
-### 1. Pasien
-- Koneksi BLE ke ESP32 untuk monitoring BPM secara real-time
-- Melihat riwayat monitoring
-- Mengubah email dan password
-
-### 2. Dokter
-- Monitoring BPM pasien secara real-time
-- Melihat dan mengelola riwayat monitoring pasien
-- Menambahkan/memilih pasien
-- Mengubah email dan password
-
-### 3. Admin
-- Manajemen user (CRUD: tambah, edit, hapus user)
-- Melihat daftar user
-- Mengubah email dan password
-
----
-
-## Struktur Folder Penting
-
-- `lib/features/patient/` : Fitur dan halaman untuk pasien
-- `lib/features/doctor/`  : Fitur dan halaman untuk dokter
-- `lib/features/admin/`   : Fitur dan halaman untuk admin
-- `lib/core/`             : Service, utilitas, dan widget global
-- `lib/app/`              : Router dan tema aplikasi
-- `android/` & `ios/`     : Konfigurasi native Android/iOS
+## ✨ Fitur Utama
+- **Pasien:**
+  - Koneksi BLE ke ESP32 untuk monitoring BPM real-time
+  - Riwayat monitoring
+  - Ubah email & password
+- **Dokter:**
+  - Monitoring BPM pasien real-time
+  - Riwayat & manajemen pasien
+  - Tambah/pilih pasien
+  - Ubah email & password
+- **Admin:**
+  - CRUD user (tambah, edit, hapus)
+  - Lihat daftar user
+  - Ubah email & password
+- **In-App Update:**
+  - Cek versi & update APK otomatis via Google Drive
+- **Robust BLE:**
+  - Koneksi BLE Flutter <-> ESP32 dengan retry, error handling, dan widget test
 
 ---
 
-## Cara Build APK (Android)
-1. Pastikan semua dependensi sudah terinstall:
+## 🛠️ Teknologi
+- **Flutter** 3.7+
+- **Riverpod** state management
+- **flutter_blue_plus** (BLE)
+- **ESP32 Arduino** (BLE server)
+- **FastAPI** (backend, opsional)
+
+---
+
+## 🚀 Cara Build APK
+1. Install dependencies:
    ```powershell
    flutter pub get
    ```
@@ -49,37 +56,37 @@ Dopply App adalah aplikasi mobile berbasis Flutter yang digunakan untuk monitori
    ```powershell
    flutter build apk --release
    ```
-3. File APK akan tersedia di:
+3. APK ada di:
    ```
    build\app\outputs\flutter-apk\app-release.apk
    ```
 
 ---
 
-## Koneksi ke ESP32 (BLE)
-- Pastikan perangkat ESP32 sudah menyala dan menyiarkan BLE dengan nama yang sesuai.
-- Tekan tombol **Connect ESP32** pada halaman monitoring.
-- Jika koneksi berhasil, data BPM akan tampil secara real-time.
+## 📡 Koneksi ke ESP32 (BLE)
+- Pastikan ESP32 menyala & advertising BLE dengan nama **Dopply-FetalMonitor**
+- Tekan **Connect ESP32** di aplikasi
+- Jika sukses, data BPM tampil real-time
+- Jika disconnect, ESP32 otomatis advertising ulang
 
 ---
 
-## Konfigurasi Backend
-- Pastikan endpoint API sudah sesuai dengan kebutuhan frontend (lihat prompt backend pada dokumentasi pengembangan).
-- Endpoint penting: `/users`, `/account/email`, `/account/password`, dsb.
+## 📁 Struktur Folder Penting
+- `lib/features/patient/` : Fitur pasien
+- `lib/features/doctor/`  : Fitur dokter
+- `lib/features/admin/`   : Fitur admin
+- `lib/core/`             : Service, utilitas, widget global
+- `lib/app/`              : Router & tema
+- `android/` & `ios/`     : Konfigurasi native
 
 ---
 
-## Catatan Pengembangan
-- Untuk pengembangan lebih lanjut, perhatikan file `proguard-rules.pro` dan dependensi pada `build.gradle.kts` jika ingin build APK release.
-- Jika ada error R8 saat build, tambahkan aturan dari `missing_rules.txt` ke `proguard-rules.pro`.
-
----
-
-## Kontributor
+## 👨‍💻 Kontributor
 - Developer: [freeluncher]
-- Untuk pertanyaan atau bantuan, silakan hubungi via email/WA sesuai kesepakatan.
+- Untuk pertanyaan/bantuan, hubungi via email/WA sesuai kesepakatan.
 
 ---
 
-## Lisensi
-Aplikasi ini dikembangkan untuk keperluan tugas akhir/skripsi dan penggunaan edukasi.
+## 📝 Catatan
+- Untuk pengembangan lebih lanjut, cek `proguard-rules.pro` & dependensi di `build.gradle.kts`.
+- Jika error R8 saat build, tambahkan aturan dari `missing_rules.txt` ke `proguard-rules.pro`.
