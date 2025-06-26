@@ -170,9 +170,6 @@ class PatientHistoryDetailPage extends StatelessWidget {
                   _buildTimelineSection(),
 
                   const SizedBox(height: 32),
-
-                  // BPM Chart Section
-                  _buildBPMChartSection(),
                 ]),
               ),
             ),
@@ -429,29 +426,6 @@ class PatientHistoryDetailPage extends StatelessWidget {
                       ),
                     ),
                   ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBPMChartSection() {
-    return MedicalCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.show_chart, color: AppColors.primaryBlue, size: 24),
-              const SizedBox(width: 12),
-              Text(
-                'Grafik BPM',
-                style: AppTextStyles.titleLarge.copyWith(
-                  color: AppColors.primaryBlue,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],

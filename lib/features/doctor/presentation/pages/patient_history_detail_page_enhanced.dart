@@ -142,6 +142,53 @@ class PatientHistoryDetailPage extends StatelessWidget {
                   onPressed: () => _shareRecord(context),
                   tooltip: 'Bagikan',
                 ),
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert,
+                    color: AppColors.medicalWhite,
+                    size: 24,
+                  ),
+                  onSelected: (value) => _handleMenuAction(context, value),
+                  itemBuilder:
+                      (context) => [
+                        PopupMenuItem(
+                          value: 'export_pdf',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.picture_as_pdf,
+                                color: AppColors.textPrimary,
+                              ),
+                              const SizedBox(width: 12),
+                              Text('Export PDF'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'print',
+                          child: Row(
+                            children: [
+                              Icon(Icons.print, color: AppColors.textPrimary),
+                              const SizedBox(width: 12),
+                              Text('Print'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'edit_notes',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.edit_note,
+                                color: AppColors.textPrimary,
+                              ),
+                              const SizedBox(width: 12),
+                              Text('Edit Catatan'),
+                            ],
+                          ),
+                        ),
+                      ],
+                ),
                 const SizedBox(width: 8),
               ],
             ),
@@ -170,9 +217,6 @@ class PatientHistoryDetailPage extends StatelessWidget {
                   _buildTimelineSection(),
 
                   const SizedBox(height: 32),
-
-                  // BPM Chart Section
-                  _buildBPMChartSection(),
                 ]),
               ),
             ),
@@ -183,10 +227,216 @@ class PatientHistoryDetailPage extends StatelessWidget {
   }
 
   void _shareRecord(BuildContext context) {
-    showAppSnackBar(
-      context,
-      'Fitur berbagi akan segera tersedia',
-      isSuccess: true,
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(top: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.textTertiary,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bagikan Record',
+                        style: AppTextStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.email_outlined,
+                            color: AppColors.primaryBlue,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text('Email'),
+                        subtitle: Text('Kirim via email'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          showAppSnackBar(
+                            context,
+                            'Fitur email akan segera tersedia',
+                            isSuccess: true,
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.medicalGreen.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.message_outlined,
+                            color: AppColors.medicalGreen,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text('WhatsApp'),
+                        subtitle: Text('Bagikan via WhatsApp'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          showAppSnackBar(
+                            context,
+                            'Fitur WhatsApp akan segera tersedia',
+                            isSuccess: true,
+                          );
+                        },
+                      ),
+                      ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.medicalOrange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.link,
+                            color: AppColors.medicalOrange,
+                            size: 20,
+                          ),
+                        ),
+                        title: Text('Copy Link'),
+                        subtitle: Text('Salin link untuk dibagikan'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          showAppSnackBar(
+                            context,
+                            'Link berhasil disalin',
+                            isSuccess: true,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  void _handleMenuAction(BuildContext context, String action) {
+    switch (action) {
+      case 'export_pdf':
+        showAppSnackBar(
+          context,
+          'Export PDF akan segera tersedia',
+          isSuccess: true,
+        );
+        break;
+      case 'print':
+        showAppSnackBar(
+          context,
+          'Fitur print akan segera tersedia',
+          isSuccess: true,
+        );
+        break;
+      case 'edit_notes':
+        _showEditNotesDialog(context);
+        break;
+    }
+  }
+
+  void _showEditNotesDialog(BuildContext context) {
+    final TextEditingController notesController = TextEditingController(
+      text: record.notes ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            backgroundColor: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            title: Text(
+              'Edit Catatan Dokter',
+              style: AppTextStyles.titleLarge.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            content: Container(
+              width: double.maxFinite,
+              child: TextField(
+                controller: notesController,
+                maxLines: 5,
+                decoration: InputDecoration(
+                  hintText: 'Tambahkan catatan untuk record ini...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                      color: AppColors.primaryBlue,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Batal',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  showAppSnackBar(
+                    context,
+                    'Catatan berhasil disimpan',
+                    isSuccess: true,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: AppColors.medicalWhite,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text('Simpan'),
+              ),
+            ],
+          ),
     );
   }
 
@@ -276,6 +526,8 @@ class PatientHistoryDetailPage extends StatelessWidget {
             _formatDateTime(record.startTime),
             Icons.schedule,
           ),
+          const SizedBox(height: 12),
+          _buildInfoRow('Durasi Monitoring', _calculateDuration(), Icons.timer),
         ],
       ),
     );
@@ -391,73 +643,82 @@ class PatientHistoryDetailPage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Timeline Item
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: _getClassificationColor(),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Monitoring Selesai',
-                      style: AppTextStyles.titleMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatDateTime(record.startTime),
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Hasil monitoring telah tersimpan dan dapat digunakan untuk evaluasi kondisi pasien.',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // Timeline Items
+          _buildTimelineItem(
+            'Monitoring Dimulai',
+            _formatDateTime(record.startTime),
+            Icons.play_circle,
+            AppColors.primaryBlue,
+            isFirst: true,
+          ),
+          _buildTimelineItem(
+            'Data Dianalisis',
+            'Sistem melakukan analisis data BPM real-time',
+            Icons.analytics,
+            AppColors.medicalOrange,
+          ),
+          _buildTimelineItem(
+            'Hasil Tersedia',
+            'Klasifikasi: ${record.classification ?? "Tidak tersedia"}',
+            Icons.check_circle,
+            _getClassificationColor(),
+            isLast: true,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBPMChartSection() {
-    return MedicalCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.show_chart, color: AppColors.primaryBlue, size: 24),
-              const SizedBox(width: 12),
-              Text(
-                'Grafik BPM',
-                style: AppTextStyles.titleLarge.copyWith(
-                  color: AppColors.primaryBlue,
-                  fontWeight: FontWeight.w600,
+  Widget _buildTimelineItem(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color, {
+    bool isFirst = false,
+    bool isLast = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          children: [
+            if (!isFirst)
+              Container(width: 2, height: 20, color: AppColors.border),
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, size: 12, color: AppColors.medicalWhite),
+            ),
+            if (!isLast)
+              Container(width: 2, height: 20, color: AppColors.border),
+          ],
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: isLast ? 0 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -490,6 +751,11 @@ class PatientHistoryDetailPage extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  String _calculateDuration() {
+    // Mock duration calculation - in real app this would be based on actual monitoring data
+    return '15 menit';
   }
 
   Color _getClassificationColor() {
