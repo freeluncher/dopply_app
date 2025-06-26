@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:dopply_app/features/auth/presentation/pages/login_page.dart'; // Import loginStatusProvider
 import 'doctor_validation_provider.dart';
-import 'package:dopply_app/features/admin/presentation/pages/user_management_page.dart';
 
 class AdminDashboard extends ConsumerWidget {
-  const AdminDashboard({Key? key}) : super(key: key);
+  const AdminDashboard({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -78,7 +76,13 @@ class AdminDashboard extends ConsumerWidget {
                     ),
                   ),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => const SizedBox.shrink(),
+              error:
+                  (e, _) => Center(
+                    child: Text(
+                      'Gagal memuat data verifikasi dokter: $e',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
             ),
             const SizedBox(height: 16),
             Expanded(
@@ -114,18 +118,6 @@ class AdminDashboard extends ConsumerWidget {
                     onPressed: () {
                       context.push('/account-settings');
                     },
-                  ),
-                  SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UserManagementPage(),
-                        ),
-                      );
-                    },
-                    child: Text('User Management'),
                   ),
                   // ...tambahkan menu lain sesuai kebutuhan...
                 ],

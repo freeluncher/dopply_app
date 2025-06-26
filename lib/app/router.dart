@@ -63,6 +63,7 @@ import '../features/doctor/presentation/pages/doctor_patients_page.dart';
 import '../features/patient/presentation/pages/monitoring_page_patient.dart';
 import 'package:dopply_app/features/patient/presentation/pages/monitoring_history_page_patient.dart';
 import 'package:dopply_app/features/patient/presentation/pages/account_settings_page_patient.dart';
+import 'package:dopply_app/features/doctor/data/models/patient_history_record.dart';
 // import fitur lain sesuai kebutuhan...
 import '../features/auth/presentation/viewmodels/user_provider.dart';
 import '../core/services/auth_guard_service.dart';
@@ -113,7 +114,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/doctor/patient-history/:id',
         builder: (context, state) {
-          final record = state.extra as Map<String, dynamic>? ?? {};
+          final map = state.extra as Map<String, dynamic>? ?? {};
+          final record = PatientHistoryRecord.fromMap(map);
           return PatientHistoryDetailPage(record: record);
         },
       ),

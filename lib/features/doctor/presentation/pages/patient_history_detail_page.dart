@@ -1,59 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:dopply_app/core/utils/date_utils.dart';
+import 'package:dopply_app/features/doctor/data/models/patient_history_record.dart';
 
-class PatientHistoryDetailPage extends StatefulWidget {
-  final Map<String, dynamic> record;
-  const PatientHistoryDetailPage({
-    Key? key,
-    required this.record,
-  }) : super(key: key);
+/// Halaman detail riwayat monitoring pasien
+class PatientHistoryDetailPage extends StatelessWidget {
+  /// Data record monitoring yang akan ditampilkan
+  final PatientHistoryRecord record;
+  const PatientHistoryDetailPage({super.key, required this.record});
 
-  @override
-  State<PatientHistoryDetailPage> createState() => _PatientHistoryDetailPageState();
-}
-
-class _PatientHistoryDetailPageState extends State<PatientHistoryDetailPage> {
   @override
   Widget build(BuildContext context) {
-    final record = widget.record;
     return Scaffold(
-      appBar: AppBar(title: Text('Detail Riwayat Pasien #${record['id']}')),
+      // AppBar menampilkan ID record
+      appBar: AppBar(title: Text('Detail Riwayat Pasien #${record.id}')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Nama Pasien: ${record['patient_name'] ?? '-'}',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text('ID Record: ${record['id'] ?? '-'}'),
-            const SizedBox(height: 8),
-            Text('ID Pasien: ${record['patient_id'] ?? '-'}'),
-            const SizedBox(height: 8),
-            Text('Klasifikasi: ${record['classification'] ?? '-'}'),
-            const SizedBox(height: 8),
-            Text('Catatan: ${record['notes'] ?? '-'}'),
-            const SizedBox(height: 8),
-            Text('Tanggal: ${_formatTanggal(record['start_time'])}'),
-            // Tambahkan field lain dari table records jika ada
-          ],
-        ),
+        child: PatientHistoryDetailContent(record: record),
       ),
     );
   }
 }
 
-String _formatTanggal(dynamic startTime) {
-  if (startTime == null) return '-';
-  try {
-    final dt = DateTime.parse(startTime.toString());
-    final bulan = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    return '${dt.day} ${bulan[dt.month]} ${dt.year}';
-  } catch (_) {
-    return startTime.toString();
+/// Widget isi detail riwayat monitoring pasien
+class PatientHistoryDetailContent extends StatelessWidget {
+  final PatientHistoryRecord record;
+  const PatientHistoryDetailContent({super.key, required this.record});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Nama pasien
+        Text(
+          'Nama Pasien: ${record.patientName}',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        // ID record monitoring
+        Text('ID Record: ${record.id}'),
+        const SizedBox(height: 8),
+        // ID pasien
+        Text('ID Pasien: ${record.patientId}'),
+        const SizedBox(height: 8),
+        // Klasifikasi hasil monitoring
+        Text('Klasifikasi: ${record.classification ?? '-'}'),
+        const SizedBox(height: 8),
+        // Catatan dokter
+        Text('Catatan: ${record.notes ?? '-'}'),
+        const SizedBox(height: 8),
+        // Tanggal monitoring diformat Indonesia
+        Text('Tanggal: ${formatTanggalIndo(record.startTime)}'),
+        // Tambahkan field lain dari table records jika ada
+      ],
+    );
   }
 }
