@@ -1,65 +1,32 @@
-import 'dart:async';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/services/monitoring_api_service.dart';
-import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
-import 'package:dopply_app/features/doctor/presentation/viewmodels/bpm_point.dart';
-import 'package:dopply_app/features/doctor/presentation/widgets/esp32_ble_bpm_stream_widget.dart';
-import '../../presentation/services/esp32_ble_service.dart';
 import 'monitoring_state.dart';
 import '../models/monitoring_patient.dart';
+import '../../data/services/monitoring_api_service.dart';
+import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
+import '../../presentation/services/esp32_ble_service.dart';
+import 'package:dopply_app/features/doctor/presentation/viewmodels/bpm_point.dart';
+import 'package:dopply_app/features/doctor/presentation/widgets/esp32_ble_bpm_stream_widget.dart';
+import 'dart:async';
 
-final patientsByDoctorProvider = FutureProvider<List<Map<String, dynamic>>>((
-  ref,
-) async {
-  final user = ref.read(userProvider);
-  if (user == null || user.role != 'doctor') return [];
-  final api = MonitoringApiService();
-  return await api.getPatientsByDoctorIdWithStorage(
-    doctorId: int.parse((user.doctorId ?? user.id).toString()),
-  );
-});
-
-/// ViewModel utama untuk monitoring BPM dan BLE pada dokter.
-class MonitoringViewModel extends ChangeNotifier {
-  /// State utama monitoring (bpm, pasien, BLE, dsb)
-  MonitoringState state = MonitoringState();
-
-  /// Service API monitoring
-  final MonitoringApiService _apiService = MonitoringApiService();
-
-  /// Ref Riverpod untuk akses provider
+class MonitoringNotifier extends StateNotifier<MonitoringState> {
   final Ref ref;
-
-  /// Timer untuk simulasi BPM
+  final MonitoringApiService _apiService = MonitoringApiService();
   Timer? _bpmTimer;
-
-  /// Service BLE ESP32
   Esp32BleService bleService = Esp32BleService();
 
-  MonitoringViewModel(this.ref);
+  MonitoringNotifier(this.ref) : super(MonitoringState());
 
-  /// Pilih pasien yang akan dimonitoring
-  void selectPatient({required String id, required String name}) {
-    state = state.copyWith(selectedPatientId: id, selectedPatientName: name);
-    notifyListeners();
-  }
-
-  /// Pilih pasien yang akan dimonitoring
   void selectPatientModel(MonitoringPatient patient) {
     state = state.copyWith(
       selectedPatientId: patient.id,
       selectedPatientName: patient.name,
     );
-    notifyListeners();
   }
 
-  /// Set controller BLE eksternal
   void setBleController(Esp32BleBpmStreamWidgetController controller) {
     bleService.setBleController(controller);
   }
 
-  /// Koneksi ke device ESP32 BLE
   void connectESP32() {
     try {
       bleService.connect();
@@ -68,12 +35,10 @@ class MonitoringViewModel extends ChangeNotifier {
         bleError: bleService.bleError,
       );
     } catch (e) {
-      state = state.copyWith(bleError: defaultErrorHandler(e));
+      state = state.copyWith(bleError: e.toString());
     }
-    notifyListeners();
   }
 
-  /// Putuskan koneksi BLE dan reset state monitoring
   void disconnectESP32() {
     try {
       bleService.disconnect();
@@ -87,12 +52,10 @@ class MonitoringViewModel extends ChangeNotifier {
       );
       _bpmTimer?.cancel();
     } catch (e) {
-      state = state.copyWith(bleError: defaultErrorHandler(e));
+      state = state.copyWith(bleError: e.toString());
     }
-    notifyListeners();
   }
 
-  /// Mulai proses monitoring BPM (simulasi dan API)
   void startMonitoring() {
     try {
       state = state.copyWith(
@@ -102,16 +65,12 @@ class MonitoringViewModel extends ChangeNotifier {
         classification: null,
         bpmData: [],
       );
-      notifyListeners();
       _bpmTimer?.cancel();
-      // Simulasi BPM tiap detik
       _bpmTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
         final newBpm = 110 + (state.bpm + 1) % 30;
         final newBpmData = List<int>.from(state.bpmData)..add(newBpm);
         state = state.copyWith(bpm: newBpm, bpmData: newBpmData);
-        notifyListeners();
       });
-      // Setelah 10 detik, kirim hasil ke API
       Future.delayed(const Duration(seconds: 10), () async {
         _bpmTimer?.cancel();
         try {
@@ -130,7 +89,7 @@ class MonitoringViewModel extends ChangeNotifier {
           String? classification;
           if (apiResult != null) {
             monitoringResult = apiResult['result'] ?? 'Unknown';
-            classification = apiResult['classification'];
+            classification = apiResult['classification'] ?? null;
           } else {
             monitoringResult = 'Gagal mengirim ke API';
             classification = null;
@@ -145,62 +104,35 @@ class MonitoringViewModel extends ChangeNotifier {
           state = state.copyWith(
             isMonitoring: false,
             monitoringDone: true,
-            monitoringResult: defaultErrorHandler(e),
+            monitoringResult: e.toString(),
             classification: null,
           );
         }
-        notifyListeners();
       });
     } catch (e) {
       state = state.copyWith(
         isMonitoring: false,
         monitoringDone: false,
-        monitoringResult: defaultErrorHandler(e),
+        monitoringResult: e.toString(),
         classification: null,
       );
-      notifyListeners();
     }
   }
 
-  /// Update catatan dokter
   void updateDoctorNote(String note) {
     state = state.copyWith(doctorNote: note);
-    notifyListeners();
   }
 
-  /// Simpan hasil monitoring, return status agar UI yang handle feedback
   Future<bool> saveResult() async {
     try {
-      // Simulasi penyimpanan, bisa diintegrasi ke backend
       state = state.copyWith(monitoringDone: false, doctorNote: '');
-      notifyListeners();
       return true;
     } catch (e) {
-      state = state.copyWith(bleError: defaultErrorHandler(e));
-      notifyListeners();
+      state = state.copyWith(bleError: e.toString());
       return false;
     }
   }
 
-  /// Filter daftar pasien berdasarkan query
-  void filterPatients(List<Map<String, dynamic>> patients, String query) {
-    try {
-      final filtered =
-          patients
-              .where(
-                (p) => (p['name'] ?? '').toLowerCase().contains(
-                  query.toLowerCase(),
-                ),
-              )
-              .toList();
-      state = state.copyWith(searchQuery: query, filteredPatients: filtered);
-    } catch (e) {
-      state = state.copyWith(bleError: defaultErrorHandler(e));
-    }
-    notifyListeners();
-  }
-
-  /// Filter daftar pasien berdasarkan query dan konversi ke model
   void filterPatientsModel(List<Map<String, dynamic>> patients, String query) {
     try {
       final filteredModels =
@@ -218,34 +150,28 @@ class MonitoringViewModel extends ChangeNotifier {
         filteredPatientModels: filteredModels,
       );
     } catch (e) {
-      state = state.copyWith(bleError: defaultErrorHandler(e));
+      state = state.copyWith(bleError: e.toString());
     }
-    notifyListeners();
   }
 
-  /// Kirim perintah stop ke BLE
   void stopMonitoringESP32() {
     try {
       bleService.stopMonitoring();
       state = state.copyWith(bleError: bleService.bleError);
     } catch (e) {
-      state = state.copyWith(bleError: defaultErrorHandler(e));
+      state = state.copyWith(bleError: e.toString());
     }
-    notifyListeners();
   }
 
-  /// Update BPM dari device ESP32
   void updateBpmFromEsp32(int bpmValue) {
     try {
       final newBpmData = List<int>.from(state.bpmData)..add(bpmValue);
       state = state.copyWith(bpm: bpmValue, bpmData: newBpmData);
     } catch (e) {
-      state = state.copyWith(bleError: defaultErrorHandler(e));
+      state = state.copyWith(bleError: e.toString());
     }
-    notifyListeners();
   }
 
-  /// Data BPM untuk chart
   List<BpmPoint> get bpmDataForChart =>
       state.bpmData
           .asMap()
@@ -253,8 +179,7 @@ class MonitoringViewModel extends ChangeNotifier {
           .map((e) => BpmPoint(Duration(seconds: e.key), e.value))
           .toList();
 
-  /// Stop monitoring dan set hasil default
-  void stopMonitoring(BuildContext context) {
+  void stopMonitoring() {
     stopMonitoringESP32();
     state = state.copyWith(
       isMonitoring: false,
@@ -262,30 +187,14 @@ class MonitoringViewModel extends ChangeNotifier {
       classification: 'Tidak terdeteksi kelainan',
       monitoringDone: true,
     );
-    notifyListeners();
   }
 
-  /// Reset seluruh state monitoring
   void resetAllMonitoringState() {
     state = MonitoringState();
-    notifyListeners();
-  }
-
-  /// Getter nama pasien terpilih
-  String get patientName => state.selectedPatientName;
-
-  /// Getter ID pasien terpilih
-  String get patientId => state.selectedPatientId;
-
-  @override
-  void dispose() {
-    _bpmTimer?.cancel();
-    super.dispose();
   }
 }
 
-final monitoringViewModelProvider = ChangeNotifierProvider.autoDispose(
-  (ref) => MonitoringViewModel(ref),
-);
-
-String defaultErrorHandler(Object e) => e.toString();
+final monitoringNotifierProvider =
+    StateNotifierProvider.autoDispose<MonitoringNotifier, MonitoringState>(
+      (ref) => MonitoringNotifier(ref),
+    );

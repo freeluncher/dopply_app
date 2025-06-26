@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../viewmodels/monitoring_view_model.dart';
+import '../viewmodels/monitoring_notifier.dart';
 import 'package:dopply_app/features/doctor/presentation/utils/add_patient_dialog.dart';
 import 'package:dopply_app/features/doctor/data/services/patient_api_service.dart';
 import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
+import '../models/monitoring_patient.dart';
 
 class PatientPickerDialog extends ConsumerWidget {
   const PatientPickerDialog({Key? key}) : super(key: key);
@@ -11,12 +13,13 @@ class PatientPickerDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patientsAsync = ref.watch(patientsByDoctorProvider);
-    final vm = ref.watch(monitoringViewModelProvider);
+    final state = ref.watch(monitoringNotifierProvider);
+    final notifier = ref.read(monitoringNotifierProvider.notifier);
     // Pastikan filteredPatients selalu up-to-date jika searchQuery kosong
     final filteredPatients =
-        vm.searchQuery.isEmpty
+        state.searchQuery.isEmpty
             ? (patientsAsync.value ?? [])
-            : vm.filteredPatients;
+            : state.filteredPatients;
     return AlertDialog(
       title: const Text('Pilih Pasien'),
       content: SizedBox(
@@ -32,8 +35,8 @@ class PatientPickerDialog extends ConsumerWidget {
               onChanged: (q) {
                 final patients = patientsAsync.value ?? [];
                 ref
-                    .read(monitoringViewModelProvider)
-                    .filterPatients(patients, q);
+                    .read(monitoringNotifierProvider.notifier)
+                    .filterPatientsModel(patients, q);
               },
             ),
             const SizedBox(height: 12),
@@ -53,15 +56,10 @@ class PatientPickerDialog extends ConsumerWidget {
                         title: Text(p['name'] ?? '-'),
                         subtitle: Text('ID: ${p['patient_id'] ?? '-'}'),
                         onTap: () {
-                          ref
-                              .read(monitoringViewModelProvider)
-                              .selectPatient(
-                                id:
-                                    (p['patient_id'] ?? p['id'] ?? '')
-                                        .toString(),
-                                name: p['name'] ?? '-',
-                              );
-                          Navigator.of(context).pop();
+                          notifier.selectPatientModel(
+                            MonitoringPatient.fromMap(p),
+                          );
+                          Navigator.pop(context);
                         },
                       );
                     },

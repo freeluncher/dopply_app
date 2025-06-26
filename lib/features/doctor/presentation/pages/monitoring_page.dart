@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../viewmodels/monitoring_view_model.dart';
+import '../viewmodels/monitoring_notifier.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/patient_picker_dialog.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/patient_summary_card.dart';
 import 'package:dopply_app/features/doctor/presentation/widgets/esp32_connection_button.dart';
@@ -30,7 +30,7 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Set controller ke ViewModel agar bisa diakses dan dikontrol
       ref
-          .read(monitoringViewModelProvider.notifier)
+          .read(monitoringNotifierProvider.notifier)
           .setBleController(_bleController!);
     });
   }
@@ -45,12 +45,12 @@ class _MonitoringPageState extends ConsumerState<MonitoringPage> {
   // Helper untuk reset dan disconnect BLE/monitoring agar tidak duplikat
   void _resetAndDisconnect() {
     try {
-      final notifier = ref.read(monitoringViewModelProvider.notifier);
-      final vm = ref.read(monitoringViewModelProvider);
-      if (vm.isMonitoring) {
+      final notifier = ref.read(monitoringNotifierProvider.notifier);
+      final state = ref.read(monitoringNotifierProvider);
+      if (state.isMonitoring) {
         notifier.stopMonitoringESP32();
       }
-      if (vm.isConnected) {
+      if (state.isConnected) {
         _bleController?.disconnect();
         notifier.disconnectESP32();
       }
@@ -106,12 +106,13 @@ class PatientPickerButton extends ConsumerWidget {
   const PatientPickerButton({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
+    final state = ref.watch(monitoringNotifierProvider);
+    final notifier = ref.read(monitoringNotifierProvider.notifier);
     return ElevatedButton.icon(
       icon: const Icon(Icons.person_search),
       label: const Text('Pilih/Tambah Pasien'),
       onPressed:
-          vm.isMonitoring
+          state.isMonitoring
               ? null
               : () async {
                 await showDialog(
@@ -128,11 +129,14 @@ class PatientSummarySection extends ConsumerWidget {
   const PatientSummarySection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
+    final state = ref.watch(monitoringNotifierProvider);
     return PatientSummaryCard(
       patientName:
-          vm.patientName.isEmpty ? 'Belum ada pasien dipilih' : vm.patientName,
-      patientId: vm.patientId.isEmpty ? '-' : vm.patientId,
+          state.selectedPatientName.isEmpty
+              ? 'Belum ada pasien dipilih'
+              : state.selectedPatientName,
+      patientId:
+          state.selectedPatientId.isEmpty ? '-' : state.selectedPatientId,
     );
   }
 }
@@ -142,18 +146,19 @@ class BleConnectionSection extends ConsumerWidget {
   const BleConnectionSection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
-    final state = context.findAncestorStateOfType<_MonitoringPageState>();
+    final state = ref.watch(monitoringNotifierProvider);
+    final notifier = ref.read(monitoringNotifierProvider.notifier);
+    final pageState = context.findAncestorStateOfType<_MonitoringPageState>();
     return ESP32ConnectionButton(
-      isConnected: vm.isConnected,
-      isMonitoring: vm.isMonitoring,
+      isConnected: state.isConnected,
+      isMonitoring: state.isMonitoring,
       onConnect: () {
-        state?._bleController?.connect();
-        vm.connectESP32();
+        pageState?._bleController?.connect();
+        notifier.connectESP32();
       },
       onDisconnect: () {
-        state?._bleController?.disconnect();
-        vm.disconnectESP32();
+        pageState?._bleController?.disconnect();
+        notifier.disconnectESP32();
       },
     );
   }
@@ -164,12 +169,13 @@ class BleErrorSection extends ConsumerWidget {
   const BleErrorSection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
-    if (vm.bleError == null || vm.bleError!.isEmpty) return SizedBox.shrink();
+    final state = ref.watch(monitoringNotifierProvider);
+    if (state.bleError == null || state.bleError!.isEmpty)
+      return SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
       child: Text(
-        vm.bleError!,
+        state.bleError!,
         style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
       ),
     );
@@ -181,23 +187,24 @@ class MonitoringControlSection extends ConsumerWidget {
   const MonitoringControlSection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
+    final state = ref.watch(monitoringNotifierProvider);
+    final notifier = ref.read(monitoringNotifierProvider.notifier);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         MonitoringButton(
-          isConnected: vm.isConnected,
-          isMonitoring: vm.isMonitoring,
-          monitoringDone: vm.monitoringDone,
-          onStart: vm.startMonitoring,
+          isConnected: state.isConnected,
+          isMonitoring: state.isMonitoring,
+          monitoringDone: state.monitoringDone,
+          onStart: notifier.startMonitoring,
         ),
-        if (vm.isMonitoring)
+        if (state.isMonitoring)
           ElevatedButton.icon(
             icon: const Icon(Icons.stop),
             label: const Text('Stop Monitoring'),
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              vm.stopMonitoring(context);
+              notifier.stopMonitoring();
             },
           ),
       ],
@@ -210,8 +217,8 @@ class MonitoringProgressSection extends ConsumerWidget {
   const MonitoringProgressSection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
-    return MonitoringProgress(isMonitoring: vm.isMonitoring);
+    final state = ref.watch(monitoringNotifierProvider);
+    return MonitoringProgress(isMonitoring: state.isMonitoring);
   }
 }
 
@@ -220,13 +227,14 @@ class BleStreamSection extends ConsumerWidget {
   const BleStreamSection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = context.findAncestorStateOfType<_MonitoringPageState>();
-    final vm = ref.watch(monitoringViewModelProvider);
-    if (state?._bleController == null) return const SizedBox.shrink();
+    final pageState = context.findAncestorStateOfType<_MonitoringPageState>();
+    final state = ref.watch(monitoringNotifierProvider);
+    final notifier = ref.read(monitoringNotifierProvider.notifier);
+    if (pageState?._bleController == null) return const SizedBox.shrink();
     return Esp32BleBpmStreamWidget(
-      controller: state!._bleController!,
+      controller: pageState!._bleController!,
       onBpmReceived: (bpm) {
-        vm.updateBpmFromEsp32(bpm);
+        notifier.updateBpmFromEsp32(bpm);
       },
     );
   }
@@ -237,8 +245,9 @@ class ChartSection extends ConsumerWidget {
   const ChartSection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
-    return BpmRealtimeChartWidget(bpmData: vm.bpmDataForChart);
+    final state = ref.watch(monitoringNotifierProvider);
+    final notifier = ref.read(monitoringNotifierProvider.notifier);
+    return BpmRealtimeChartWidget(bpmData: notifier.bpmDataForChart);
   }
 }
 
@@ -247,14 +256,24 @@ class MonitoringResultSection extends ConsumerWidget {
   const MonitoringResultSection({super.key});
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vm = ref.watch(monitoringViewModelProvider);
+    final state = ref.watch(monitoringNotifierProvider);
+    final notifier = ref.read(monitoringNotifierProvider.notifier);
     return MonitoringResultCard(
-      monitoringResult: vm.monitoringResult,
-      classification: vm.classification,
-      doctorNote: vm.doctorNote,
-      onNoteChanged: vm.updateDoctorNote,
-      onSave: () => vm.saveResult(context),
-      monitoringDone: vm.monitoringDone,
+      monitoringResult: state.monitoringResult,
+      classification: state.classification,
+      doctorNote: state.doctorNote,
+      onNoteChanged: notifier.updateDoctorNote,
+      onSave: () async {
+        final success = await notifier.saveResult();
+        if (success && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hasil pemeriksaan berhasil disimpan!'),
+            ),
+          );
+        }
+      },
+      monitoringDone: state.monitoringDone,
     );
   }
 }

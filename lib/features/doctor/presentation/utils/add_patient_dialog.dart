@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'add_patient_logic.dart';
 
+/// Dialog untuk menambah pasien baru.
+/// Mengembalikan true jika pasien berhasil ditambahkan, false jika dibatalkan, dan null jika dialog ditutup paksa.
 Future<bool?> showAddNewPatientDialog(
   BuildContext context,
   WidgetRef ref,
@@ -14,6 +16,84 @@ Future<bool?> showAddNewPatientDialog(
   final medicalNoteController = TextEditingController();
   String? backendError;
   bool isLoading = false;
+
+  // Widget untuk field input pasien
+  Widget _PatientFormFields() => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      TextFormField(
+        controller: nameController,
+        decoration: const InputDecoration(labelText: 'Nama*'),
+        validator: (v) => v == null || v.isEmpty ? 'Nama wajib diisi' : null,
+      ),
+      TextFormField(
+        controller: emailController,
+        decoration: const InputDecoration(labelText: 'Email*'),
+        validator: (v) => v == null || v.isEmpty ? 'Email wajib diisi' : null,
+        keyboardType: TextInputType.emailAddress,
+      ),
+      TextFormField(
+        controller: birthDateController,
+        decoration: const InputDecoration(
+          labelText: 'Tanggal Lahir (YYYY-MM-DD)',
+        ),
+      ),
+      TextFormField(
+        controller: addressController,
+        decoration: const InputDecoration(labelText: 'Alamat'),
+      ),
+      TextFormField(
+        controller: medicalNoteController,
+        decoration: const InputDecoration(labelText: 'Catatan Medis'),
+      ),
+      if (backendError != null) ...[
+        const SizedBox(height: 8),
+        Text(backendError!, style: const TextStyle(color: Colors.red)),
+      ],
+    ],
+  );
+
+  // Widget untuk tombol aksi
+  List<Widget> _DialogActions(
+    void Function(bool) setLoading,
+    void Function(String?) setError,
+  ) => [
+    TextButton(
+      onPressed: isLoading ? null : () => Navigator.pop(context, false),
+      child: const Text('Batal'),
+    ),
+    ElevatedButton(
+      onPressed:
+          isLoading
+              ? null
+              : () async {
+                await submitAddNewPatient(
+                  context: context,
+                  ref: ref,
+                  formKey: formKey,
+                  nameController: nameController,
+                  emailController: emailController,
+                  birthDateController: birthDateController,
+                  addressController: addressController,
+                  medicalNoteController: medicalNoteController,
+                  setLoading: setLoading,
+                  setError: setError,
+                  onSuccess: (_) {
+                    Navigator.pop(context, true);
+                  },
+                );
+              },
+      child:
+          isLoading
+              ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+              : const Text('Tambah'),
+    ),
+  ];
+
   return await showDialog<bool>(
     context: context,
     builder:
@@ -25,93 +105,9 @@ Future<bool?> showAddNewPatientDialog(
               title: const Text('Tambah Pasien Baru'),
               content: Form(
                 key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextFormField(
-                        controller: nameController,
-                        decoration: const InputDecoration(labelText: 'Nama*'),
-                        validator:
-                            (v) =>
-                                v == null || v.isEmpty
-                                    ? 'Nama wajib diisi'
-                                    : null,
-                      ),
-                      TextFormField(
-                        controller: emailController,
-                        decoration: const InputDecoration(labelText: 'Email*'),
-                        validator:
-                            (v) =>
-                                v == null || v.isEmpty
-                                    ? 'Email wajib diisi'
-                                    : null,
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      TextFormField(
-                        controller: birthDateController,
-                        decoration: const InputDecoration(
-                          labelText: 'Tanggal Lahir (YYYY-MM-DD)',
-                        ),
-                      ),
-                      TextFormField(
-                        controller: addressController,
-                        decoration: const InputDecoration(labelText: 'Alamat'),
-                      ),
-                      TextFormField(
-                        controller: medicalNoteController,
-                        decoration: const InputDecoration(
-                          labelText: 'Catatan Medis',
-                        ),
-                      ),
-                      if (backendError != null) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          backendError!,
-                          style: const TextStyle(color: Colors.red),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
+                child: SingleChildScrollView(child: _PatientFormFields()),
               ),
-              actions: [
-                TextButton(
-                  onPressed:
-                      isLoading ? null : () => Navigator.pop(context, false),
-                  child: const Text('Batal'),
-                ),
-                ElevatedButton(
-                  onPressed:
-                      isLoading
-                          ? null
-                          : () async {
-                            await submitAddNewPatient(
-                              context: context,
-                              ref: ref,
-                              formKey: formKey,
-                              nameController: nameController,
-                              emailController: emailController,
-                              birthDateController: birthDateController,
-                              addressController: addressController,
-                              medicalNoteController: medicalNoteController,
-                              setLoading: setLoading,
-                              setError: setError,
-                              onSuccess: () {
-                                Navigator.pop(context, true);
-                              },
-                            );
-                          },
-                  child:
-                      isLoading
-                          ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                          : const Text('Tambah'),
-                ),
-              ],
+              actions: _DialogActions(setLoading, setError),
             );
           },
         ),

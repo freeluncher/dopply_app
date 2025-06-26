@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:dopply_app/features/doctor/presentation/viewmodels/bpm_point.dart';
+import 'bpm_line_chart.dart';
+import 'bpm_stat_row.dart';
 
+/// Widget displaying a real-time BPM chart and stats for fetal monitoring.
 class BpmRealtimeChartWidget extends StatelessWidget {
   final List<BpmPoint> bpmData;
   const BpmRealtimeChartWidget({super.key, required this.bpmData});
@@ -11,7 +14,6 @@ class BpmRealtimeChartWidget extends StatelessWidget {
     if (bpmData.isEmpty) {
       return const Center(child: Text('Belum ada data BPM'));
     }
-    // Show all data for historical trend
     final data = bpmData;
     final List<FlSpot> spots =
         data
@@ -27,6 +29,7 @@ class BpmRealtimeChartWidget extends StatelessWidget {
             .toDouble();
     final minX = spots.first.x;
     final maxX = spots.last.x;
+    final isWide = MediaQuery.of(context).size.width > 600;
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 12),
@@ -35,155 +38,54 @@ class BpmRealtimeChartWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start, // Tambah ini agar header tidak overflow
-              children: [
-                Flexible(
-                  child: const Text(
-                    'Grafik Detak Jantung Janin (BPM)',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    overflow: TextOverflow.ellipsis,
+            _ChartHeader(spots: spots),
+            const SizedBox(height: 8),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                // Responsive chart width: more width for wide screens
+                final chartWidth =
+                    isWide
+                        ? (constraints.maxWidth * 0.9).clamp(400, 1200)
+                        : (constraints.maxWidth * 1.2).clamp(320, 800);
+                return SizedBox(
+                  width: chartWidth.toDouble(),
+                  child: BpmLineChart(
+                    spots: spots,
+                    minY: minY,
+                    maxY: maxY,
+                    minX: minX,
+                    maxX: maxX,
                   ),
-                ),
-                if (spots.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.favorite, color: Colors.red[400], size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          'BPM: ${spots.last.y.toInt()}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 13,
-                            color: Colors.red,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
+                );
+              },
             ),
             const SizedBox(height: 8),
-            SizedBox(
-              height: 180,
-              width: double.infinity, // Tambahkan ini agar chart tidak overflow
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: ((maxX - minX + 1) * 12).clamp(320, 2000).toDouble(),
-                  child: LineChart(
-                    LineChartData(
-                      minY: minY,
-                      maxY: maxY,
-                      minX: minX,
-                      maxX: maxX,
-                      gridData: FlGridData(
-                        show: true,
-                        horizontalInterval: 10,
-                        getDrawingHorizontalLine:
-                            (v) => FlLine(
-                              color: Colors.grey.shade200,
-                              strokeWidth: 1,
-                            ),
+            isWide
+                ? Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: BpmStatRow(
+                        minBpm: spots
+                            .map((e) => e.y.toInt())
+                            .reduce((a, b) => a < b ? a : b),
+                        maxBpm: spots
+                            .map((e) => e.y.toInt())
+                            .reduce((a, b) => a > b ? a : b),
+                        latestBpm: spots.last.y.toInt(),
                       ),
-                      titlesData: FlTitlesData(
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 32,
-                            interval: 20,
-                            getTitlesWidget: (value, meta) {
-                              if (value % 20 == 0) {
-                                return Text(
-                                  value.toInt().toString(),
-                                  style: const TextStyle(fontSize: 12),
-                                );
-                              }
-                              return const SizedBox.shrink();
-                            },
-                          ),
-                        ),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 32,
-                            interval: 10,
-                            getTitlesWidget: (value, meta) {
-                              return Text(
-                                '${value.toInt()}s',
-                                style: const TextStyle(fontSize: 10),
-                              );
-                            },
-                          ),
-                        ),
-                        rightTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                        topTitles: AxisTitles(
-                          sideTitles: SideTitles(showTitles: false),
-                        ),
-                      ),
-                      borderData: FlBorderData(
-                        show: true,
-                        border: Border.all(color: Colors.grey),
-                      ),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: spots,
-                          isCurved: false, // sharp lines
-                          color: Colors.red,
-                          barWidth: 3,
-                          dotData: FlDotData(show: false),
-                        ),
-                      ],
                     ),
-                  ),
+                  ],
+                )
+                : BpmStatRow(
+                  minBpm: spots
+                      .map((e) => e.y.toInt())
+                      .reduce((a, b) => a < b ? a : b),
+                  maxBpm: spots
+                      .map((e) => e.y.toInt())
+                      .reduce((a, b) => a > b ? a : b),
+                  latestBpm: spots.last.y.toInt(),
                 ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _StatBox(
-                  label: 'Min',
-                  value:
-                      spots
-                          .map((e) => e.y.toInt())
-                          .reduce((a, b) => a < b ? a : b)
-                          .toString(),
-                  color: Colors.blue[700],
-                ),
-                _StatBox(
-                  label: 'Max',
-                  value:
-                      spots
-                          .map((e) => e.y.toInt())
-                          .reduce((a, b) => a > b ? a : b)
-                          .toString(),
-                  color: Colors.orange[700],
-                ),
-                _StatBox(
-                  label: 'Terbaru',
-                  value: spots.last.y.toInt().toString(),
-                  color: Colors.red[700],
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -191,38 +93,47 @@ class BpmRealtimeChartWidget extends StatelessWidget {
   }
 }
 
-// Tambahkan widget kecil untuk statistik
-class _StatBox extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color? color;
-  const _StatBox({required this.label, required this.value, this.color});
-
+class _ChartHeader extends StatelessWidget {
+  final List<FlSpot> spots;
+  const _ChartHeader({required this.spots});
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color?.withOpacity(0.08) ?? Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color ?? Colors.grey, width: 1),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: TextStyle(fontSize: 11, color: color ?? Colors.grey),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Flexible(
+          child: Text(
+            'Grafik Detak Jantung Janin (BPM)',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            overflow: TextOverflow.ellipsis,
           ),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-              color: color ?? Colors.black,
+        ),
+        if (spots.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.red[50],
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.favorite, color: Colors.red[400], size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  'BPM: ${spots.last.y.toInt()}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Colors.red,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+      ],
     );
   }
 }
