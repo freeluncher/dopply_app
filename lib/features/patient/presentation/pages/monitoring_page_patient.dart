@@ -47,6 +47,8 @@ class _MonitoringPagePatientState extends ConsumerState<MonitoringPagePatient> {
       }
       notifier.setBleController(_bleController!);
       debugPrint('[MonitoringPagePatient] BLE controller set');
+      // Panggil fetchAndSetPatientTableId agar patientTableId terisi
+      notifier.fetchAndSetPatientTableId();
     });
   }
 

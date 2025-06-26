@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../features/doctor/presentation/widgets/esp32_ble_bpm_stream_widget.dart';
 import '../../data/services/monitoring_api_service_patient.dart';
+import '../../data/services/patient_profile_api_service.dart';
 
 class BpmPoint {
   final Duration time;
@@ -14,6 +15,7 @@ class MonitoringViewModelPatient extends ChangeNotifier {
   int bpm = 120;
   String _patientName = '';
   String _patientId = '';
+  String _patientTableId = ''; // Tambahan: id dari tabel patients
   bool isConnected = false;
   bool isMonitoring = false;
   bool monitoringDone = false;
@@ -124,16 +126,37 @@ class MonitoringViewModelPatient extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Tambahkan getter/setter untuk patientTableId
+  String get patientTableId => _patientTableId;
+  void setPatientTableId(String id) {
+    _patientTableId = id;
+    notifyListeners();
+  }
+
+  /// Panggil ini setelah login atau saat initState
+  Future<void> fetchAndSetPatientTableId() async {
+    // Import service baru
+    // ignore: unused_import
+
+    final api = PatientProfileApiService();
+    final profile = await api.fetchPatientProfile();
+    if (profile != null &&
+        profile['patient'] != null &&
+        profile['patient']['id'] != null) {
+      setPatientTableId(profile['patient']['id'].toString());
+    }
+  }
+
   Future<void> saveResult(BuildContext context) async {
     // Kirim data ke backend (API call)
     debugPrint(
-      '[PATIENT] Simpan hasil: nama=$_patientName, id=$_patientId, bpmData=bpmData.length}',
+      '[PATIENT] Simpan hasil: nama=$_patientName, patientTableId=$_patientTableId, bpmData=bpmData.length}',
     );
     final api = MonitoringApiServicePatient();
     final bpmDataList =
         bpmData.map((e) => {'time': e.time.inSeconds, 'bpm': e.bpm}).toList();
     final success = await api.sendMonitoringResultPatient(
-      patientId: _patientId,
+      patientId: _patientTableId, // GUNAKAN patients.id!
       bpmData: bpmDataList,
       classification: classification,
       monitoringResult: monitoringResult,
