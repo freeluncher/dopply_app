@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'app/router.dart';
+import 'app/theme.dart'; // Import tema medical
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,8 +25,13 @@ class MyApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       routerConfig: router,
-      title: 'Dopply App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      title: 'Dopply - Medical Monitoring App',
+      // Aplikasi tema medical yang menunjukkan profesionalitas dan integritas
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light, // Default ke light theme
+      debugShowCheckedModeBanner:
+          false, // Hilangkan banner debug untuk tampilan lebih bersih
     );
   }
 }
