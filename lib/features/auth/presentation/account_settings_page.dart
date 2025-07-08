@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../services/api/user_api_service.dart';
 import 'providers/user_provider.dart';
 import 'providers/auth_repository_provider.dart';
+import 'providers/profile_photo_provider.dart';
 
 /// **Account Settings Page**
 ///
@@ -89,7 +90,56 @@ class AccountSettingsPage extends ConsumerWidget {
     );
   }
 
-  /// Shows dialog for changing user password
+  /// Shows dialog for changing profile photo
+  void _showChangePhotoDialog(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Ubah Foto Profil'),
+            content: const Text('Pilih aksi untuk foto profil Anda'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  // Use the profile photo provider to handle photo upload
+                  await ref
+                      .read(profilePhotoProvider.notifier)
+                      .selectAndUploadPhoto(context);
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.photo_camera),
+                    SizedBox(width: 8),
+                    Text('Ubah Foto'),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  // Delete current photo
+                  await ref.read(profilePhotoProvider.notifier).deletePhoto();
+                },
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.delete, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Hapus Foto', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
   void _showChangePasswordDialog(
     BuildContext context,
     WidgetRef ref,
@@ -208,6 +258,25 @@ class AccountSettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProvider);
+    final photoState = ref.watch(profilePhotoProvider);
+
+    // Show success/error messages from photo operations
+    ref.listen<ProfilePhotoState>(profilePhotoProvider, (previous, next) {
+      if (next.successMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(next.successMessage!),
+            backgroundColor: Colors.green,
+          ),
+        );
+        ref.read(profilePhotoProvider.notifier).clearMessages();
+      } else if (next.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!), backgroundColor: Colors.red),
+        );
+        ref.read(profilePhotoProvider.notifier).clearMessages();
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -224,7 +293,9 @@ class AccountSettingsPage extends ConsumerWidget {
                 CircleAvatar(
                   radius: 48,
                   backgroundImage:
-                      user?.email != null
+                      user?.fullPhotoUrl != null
+                          ? NetworkImage(user!.fullPhotoUrl!)
+                          : user?.email != null
                           ? NetworkImage(
                             'https://ui-avatars.com/api/?name=${user!.email}&background=0D8ABC&color=fff',
                           )
@@ -242,17 +313,29 @@ class AccountSettingsPage extends ConsumerWidget {
                       color: Theme.of(context).primaryColor,
                       shape: BoxShape.circle,
                     ),
-                    child: IconButton(
-                      icon: const Icon(Icons.camera_alt, color: Colors.white),
-                      onPressed: () {
-                        // TODO: Implement photo change functionality
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Fitur ganti foto akan segera hadir'),
-                          ),
-                        );
-                      },
-                    ),
+                    child:
+                        photoState.isLoading
+                            ? const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              ),
+                            )
+                            : IconButton(
+                              icon: const Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                              ),
+                              onPressed:
+                                  () => _showChangePhotoDialog(context, ref),
+                            ),
                   ),
                 ),
               ],

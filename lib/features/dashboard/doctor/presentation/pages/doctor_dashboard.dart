@@ -167,10 +167,10 @@ class _DoctorDashboardState extends ConsumerState<DoctorDashboard> {
 
   Widget _buildSliverAppBar(BuildContext context, User? user) {
     String title = 'Doctor Dashboard';
-    if (user?.name != null && user!.name.isNotEmpty) {
-      final firstName = user.name.split(' ').first;
-      title = 'Welcome, Dr. $firstName';
-    }
+    // if (user?.name != null && user!.name.isNotEmpty) {
+    //   final firstName = user.name.split(' ').first;
+    //   title = 'Welcome, Dr. $firstName';
+    // }
 
     return SliverAppBar(
       expandedHeight: 140,
