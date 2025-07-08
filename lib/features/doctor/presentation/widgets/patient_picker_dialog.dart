@@ -1,11 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../viewmodels/monitoring_view_model.dart';
-import '../viewmodels/monitoring_notifier.dart';
 import 'package:dopply_app/features/doctor/presentation/utils/add_patient_dialog.dart';
+import 'package:dopply_app/features/auth/presentation/providers/user_provider.dart';
 import 'package:dopply_app/features/doctor/data/services/patient_api_service.dart';
-import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
 import '../models/monitoring_patient.dart';
+
+// Provider for patient API service
+final patientApiServiceProvider = Provider((ref) => PatientApiService());
+
+// Provider for patients by doctor using real API
+final patientsByDoctorProvider = FutureProvider<List<MonitoringPatient>>((
+  ref,
+) async {
+  final user = ref.read(userProvider);
+  if (user == null || user.role != 'doctor') {
+    return [];
+  }
+
+  final apiService = ref.read(patientApiServiceProvider);
+
+  try {
+    final doctorId = user.id;
+    final patientsData = await apiService.getPatientsByDoctorId(doctorId);
+
+    // Convert API response to MonitoringPatient objects
+    final patients =
+        patientsData.map((data) {
+          // Try to use enhanced format first, then fall back to basic user format
+          try {
+            return MonitoringPatient.fromMap(data);
+          } catch (e) {
+            // If enhanced format fails, try basic format
+            return MonitoringPatient.fromBasicUser(data);
+          }
+        }).toList();
+
+    return patients;
+  } catch (e) {
+    print('Error fetching patients: $e');
+
+    // Fallback to demo data if API fails
+    return [
+      MonitoringPatient(
+        id: '1',
+        name: 'Jane Doe (Demo)',
+        email: 'jane.doe@demo.com',
+        age: 28,
+        gender: 'female',
+        status: 'active',
+      ),
+      MonitoringPatient(
+        id: '2',
+        name: 'Mary Smith (Demo)',
+        email: 'mary.smith@demo.com',
+        age: 32,
+        gender: 'female',
+        status: 'active',
+      ),
+      MonitoringPatient(
+        id: '3',
+        name: 'Sarah Johnson (Demo)',
+        email: 'sarah.johnson@demo.com',
+        age: 25,
+        gender: 'female',
+        status: 'active',
+      ),
+    ];
+  }
+});
+
+// Simple search state provider
+final patientSearchProvider = StateProvider<String>((ref) => '');
 
 class PatientPickerDialog extends ConsumerWidget {
   const PatientPickerDialog({Key? key}) : super(key: key);
@@ -13,15 +78,22 @@ class PatientPickerDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final patientsAsync = ref.watch(patientsByDoctorProvider);
-    final state = ref.watch(monitoringNotifierProvider);
-    final notifier = ref.read(monitoringNotifierProvider.notifier);
-    // Pastikan filteredPatients selalu up-to-date jika searchQuery kosong
-    final filteredPatients =
-        state.searchQuery.isEmpty
-            ? (patientsAsync.value ?? [])
-            : state.filteredPatients;
+    final searchQuery = ref.watch(patientSearchProvider);
+
     return AlertDialog(
-      title: const Text('Pilih Pasien'),
+      title: Row(
+        children: [
+          const Text('Pilih Pasien'),
+          const Spacer(),
+          IconButton(
+            onPressed: () {
+              ref.invalidate(patientsByDoctorProvider);
+            },
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
       content: SizedBox(
         width: 350,
         child: Column(
@@ -29,206 +101,192 @@ class PatientPickerDialog extends ConsumerWidget {
           children: [
             TextField(
               decoration: const InputDecoration(
-                labelText: 'Cari pasien',
+                labelText: 'Cari Pasien',
                 prefixIcon: Icon(Icons.search),
               ),
-              onChanged: (q) {
-                final patients = patientsAsync.value ?? [];
-                ref
-                    .read(monitoringNotifierProvider.notifier)
-                    .filterPatientsModel(patients, q);
+              onChanged: (value) {
+                ref.read(patientSearchProvider.notifier).state = value;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             patientsAsync.when(
               data: (patients) {
-                final filtered = filteredPatients;
-                if (filtered.isEmpty) {
-                  return const Text('Tidak ada pasien ditemukan.');
-                }
-                return SizedBox(
-                  height: 200,
-                  child: ListView.builder(
-                    itemCount: filtered.length,
-                    itemBuilder: (context, idx) {
-                      final p = filtered[idx];
-                      return ListTile(
-                        title: Text(p['name'] ?? '-'),
-                        subtitle: Text('ID: ${p['patient_id'] ?? '-'}'),
-                        onTap: () {
-                          notifier.selectPatientModel(
-                            MonitoringPatient.fromMap(p),
-                          );
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
-                  ),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Gagal memuat pasien: $e'),
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.person_add),
-              label: const Text('Tambah Pasien'),
-              onPressed: () async {
-                final menu = await showModalBottomSheet<String>(
-                  context: context,
-                  builder:
-                      (context) => SafeArea(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(
-                              leading: const Icon(Icons.person_add_alt_1),
-                              title: const Text('Tambah Pasien Baru'),
-                              onTap: () => Navigator.pop(context, 'baru'),
-                            ),
-                            ListTile(
-                              leading: const Icon(Icons.person_search),
-                              title: const Text(
-                                'Tambah Pasien yang Sudah Terdaftar',
+                final filteredPatients =
+                    searchQuery.isEmpty
+                        ? patients
+                        : patients
+                            .where(
+                              (p) => p.name.toLowerCase().contains(
+                                searchQuery.toLowerCase(),
                               ),
-                              onTap: () => Navigator.pop(context, 'terdaftar'),
+                            )
+                            .toList();
+
+                final isDemoData = patients.any(
+                  (p) => p.name.contains('(Demo)'),
+                );
+
+                return Column(
+                  children: [
+                    if (isDemoData)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        margin: const EdgeInsets.only(bottom: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.orange),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text(
+                                'Menggunakan data demo. Periksa koneksi internet.',
+                                style: TextStyle(fontSize: 12),
+                              ),
                             ),
                           ],
                         ),
                       ),
-                );
-                if (menu == 'baru') {
-                  final result = await showAddNewPatientDialog(context, ref);
-                  if (result == true) {
-                    // ignore: unused_result
-                    ref.refresh(patientsByDoctorProvider);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Pasien baru berhasil didaftarkan!'),
-                      ),
-                    );
-                  }
-                } else if (menu == 'terdaftar') {
-                  final emailController = TextEditingController();
-                  final noteController = TextEditingController();
-                  final formKey = GlobalKey<FormState>();
-                  String? backendError;
-                  final result = await showDialog<bool>(
-                    context: context,
-                    builder:
-                        (_) => StatefulBuilder(
-                          builder:
-                              (context, setState) => AlertDialog(
-                                title: const Text(
-                                  'Tambah Pasien ke Daftar Dokter',
+                    SizedBox(
+                      height: isDemoData ? 260 : 300,
+                      child: ListView.builder(
+                        itemCount: filteredPatients.length,
+                        itemBuilder: (context, index) {
+                          final patient = filteredPatients[index];
+                          return Card(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                backgroundColor: Theme.of(context).primaryColor,
+                                child: Text(
+                                  patient.name.isNotEmpty
+                                      ? patient.name[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(color: Colors.white),
                                 ),
-                                content: Form(
-                                  key: formKey,
-                                  child: SingleChildScrollView(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        TextFormField(
-                                          controller: emailController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Email Pasien',
-                                          ),
-                                          validator:
-                                              (v) =>
-                                                  v == null || v.isEmpty
-                                                      ? 'Wajib diisi'
-                                                      : null,
+                              ),
+                              title: Text(
+                                patient.name,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Email: ${patient.email}'),
+                                  if (patient.age != null)
+                                    Text('Umur: ${patient.age} tahun'),
+                                  if (patient.phone != null)
+                                    Text('Telepon: ${patient.phone}'),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 2,
                                         ),
-                                        TextFormField(
-                                          controller: noteController,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Catatan (opsional)',
+                                        decoration: BoxDecoration(
+                                          color:
+                                              patient.status == 'active'
+                                                  ? Colors.green.withOpacity(
+                                                    0.2,
+                                                  )
+                                                  : Colors.orange.withOpacity(
+                                                    0.2,
+                                                  ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
                                         ),
-                                        if (backendError != null) ...[
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            backendError!,
-                                            style: const TextStyle(
-                                              color: Colors.red,
-                                            ),
+                                        child: Text(
+                                          patient.status.toUpperCase(),
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color:
+                                                patient.status == 'active'
+                                                    ? Colors.green.shade700
+                                                    : Colors.orange.shade700,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                        ],
+                                        ),
+                                      ),
+                                      if (patient.totalRecords != null) ...[
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${patient.totalRecords} rekam medis',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
                                       ],
-                                    ),
-                                  ),
-                                ),
-                                actions: [
-                                  TextButton(
-                                    onPressed:
-                                        () => Navigator.pop(context, false),
-                                    child: const Text('Batal'),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () async {
-                                      if (!(formKey.currentState?.validate() ??
-                                          false))
-                                        return;
-                                      final user = ref.read(userProvider);
-                                      final doctorId =
-                                          user?.doctorId ?? user?.id;
-                                      if (doctorId == null) {
-                                        setState(() {
-                                          backendError =
-                                              'Gagal: doctorId tidak ditemukan!';
-                                        });
-                                        return;
-                                      }
-                                      final api = PatientApiService();
-                                      bool success = false;
-                                      await api
-                                          .assignPatientToDoctorByEmail(
-                                            doctorId: int.parse(
-                                              doctorId.toString(),
-                                            ),
-                                            email: emailController.text,
-                                            note:
-                                                noteController.text.isNotEmpty
-                                                    ? noteController.text
-                                                    : null,
-                                            status: 'active',
-                                            onError:
-                                                (err) => backendError = err,
-                                          )
-                                          .then((v) => success = v);
-                                      if (success) {
-                                        Navigator.pop(context, true);
-                                      } else {
-                                        setState(() {
-                                          if (backendError != null &&
-                                              backendError!.isNotEmpty) {
-                                            // error already set
-                                          } else {
-                                            backendError =
-                                                'Gagal menambahkan pasien!';
-                                          }
-                                        });
-                                      }
-                                    },
-                                    child: const Text('Tambah'),
+                                    ],
                                   ),
                                 ],
                               ),
-                        ),
-                  );
-                  if (result == true) {
-                    // ignore: unused_result
-                    ref.refresh(patientsByDoctorProvider);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Pasien berhasil ditambahkan ke daftar Anda!',
-                        ),
+                              onTap: () {
+                                Navigator.of(context).pop(patient);
+                              },
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  }
-                }
+                    ),
+                  ],
+                );
               },
+              loading:
+                  () => const SizedBox(
+                    height: 300,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Memuat daftar pasien...'),
+                        ],
+                      ),
+                    ),
+                  ),
+              error:
+                  (error, stack) => SizedBox(
+                    height: 300,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 48,
+                            color: Colors.red,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Gagal memuat daftar pasien',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Menggunakan data demo',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              ref.invalidate(patientsByDoctorProvider);
+                            },
+                            child: Text('Coba Lagi'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
             ),
           ],
         ),
@@ -236,7 +294,18 @@ class PatientPickerDialog extends ConsumerWidget {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Tutup'),
+          child: const Text('Batal'),
+        ),
+        TextButton(
+          onPressed: () async {
+            final result = await showAddNewPatientDialog(context, ref);
+            if (result == true) {
+              // Refresh the patient list and close dialog
+              ref.invalidate(patientsByDoctorProvider);
+              Navigator.of(context).pop();
+            }
+          },
+          child: const Text('Tambah Pasien Baru'),
         ),
       ],
     );
