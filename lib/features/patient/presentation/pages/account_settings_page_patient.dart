@@ -13,6 +13,8 @@ class AccountSettingsPagePatient extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final vm = ref.watch(accountViewModelPatientProvider);
     final emailController = TextEditingController();
+    final emailPasswordController =
+        TextEditingController(); // Added for email verification
     final oldPasswordController = TextEditingController();
     final newPasswordController = TextEditingController();
     return Scaffold(
@@ -25,24 +27,30 @@ class AccountSettingsPagePatient extends ConsumerWidget {
               'Ganti Email',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: emailController,
-                    decoration: const InputDecoration(hintText: 'Email baru'),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed:
-                      vm.isLoading
-                          ? null
-                          : () => ref
-                              .read(accountViewModelPatientProvider)
-                              .changeEmail(emailController.text),
-                  child: const Text('Ganti Email'),
-                ),
-              ],
+            TextField(
+              controller: emailController,
+              decoration: const InputDecoration(hintText: 'Email baru'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: emailPasswordController,
+              decoration: const InputDecoration(
+                hintText: 'Password untuk verifikasi',
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed:
+                  vm.isLoading
+                      ? null
+                      : () => ref
+                          .read(accountViewModelPatientProvider)
+                          .changeEmail(
+                            emailController.text,
+                            emailPasswordController.text,
+                          ),
+              child: const Text('Ganti Email'),
             ),
             const SizedBox(height: 24),
             const Text(
