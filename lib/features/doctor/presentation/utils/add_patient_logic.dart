@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dopply_app/features/doctor/data/services/patient_api_service.dart';
-import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
+import 'package:dopply_app/features/auth/presentation/providers/user_provider.dart';
 import 'package:dopply_app/features/doctor/data/models/doctor_patient.dart';
 
 /// Submit form penambahan pasien baru dan assign ke dokter.

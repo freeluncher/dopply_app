@@ -1,8 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:dopply_app/features/doctor/data/models/doctor_patient.dart';
 import 'package:dopply_app/features/doctor/presentation/viewmodels/doctor_patients_notifier.dart';
+import 'package:dopply_app/features/doctor/presentation/models/monitoring_patient.dart';
+import 'package:dopply_app/features/doctor/presentation/widgets/patient_status_update_dialog.dart';
+import 'package:dopply_app/features/doctor/data/services/patient_api_service.dart';
+import 'package:dopply_app/features/auth/presentation/providers/user_provider.dart';
 import 'package:dopply_app/app/theme.dart';
 
 /// Helper untuk menampilkan snackbar notifikasi/error dengan tema medical
@@ -142,6 +147,11 @@ class _DoctorPatientsPageState extends ConsumerState<DoctorPatientsPage> {
       context: context,
       builder: (_) => PatientDetailDialog(patient: patient),
     );
+  }
+
+  /// Navigasi ke halaman riwayat monitoring pasien
+  void _onViewHistory(DoctorPatient patient) {
+    context.push('/doctor/patient-monitoring-history', extra: patient);
   }
 
   @override
@@ -305,10 +315,17 @@ class _DoctorPatientsPageState extends ConsumerState<DoctorPatientsPage> {
       return _buildEmptyState(state.searchQuery.isNotEmpty);
     }
 
-    return PatientList(
-      patients: filteredPatients,
-      onDetail: _onDetail,
-      onDelete: _onDelete,
+    return RefreshIndicator(
+      onRefresh: () async {
+        await ref.read(doctorPatientsProvider.notifier).forceRefresh();
+      },
+      child: PatientList(
+        patients: filteredPatients,
+        onDetail: _onDetail,
+        onDelete: _onDelete,
+        onViewHistory: _onViewHistory,
+        onStatusEdit: (patient) => _showStatusUpdateDialog(context, patient),
+      ),
     );
   }
 
@@ -408,6 +425,102 @@ class _DoctorPatientsPageState extends ConsumerState<DoctorPatientsPage> {
       ),
     );
   }
+
+  /// Show status update dialog for patient
+  void _showStatusUpdateDialog(
+    BuildContext context,
+    DoctorPatient patient,
+  ) async {
+    // Convert DoctorPatient to MonitoringPatient for the dialog
+    final monitoringPatient = MonitoringPatient(
+      id: patient.patientId.toString(),
+      name: patient.name,
+      email: patient.email,
+      age: patient.age,
+      gender: patient.gender,
+      phone: patient.phone,
+      status: patient.status ?? 'active',
+      notes: patient.notes,
+    );
+
+    await showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => PatientStatusUpdateDialog(
+            patient: monitoringPatient,
+            onStatusUpdate: (newStatus, newNotes) async {
+              try {
+                print(
+                  '[StatusUpdate] Starting update for patient ${patient.patientId} from ${patient.status} to $newStatus',
+                );
+
+                // Close dialog first
+                Navigator.of(dialogContext).pop(true);
+
+                // Use a post-frame callback to ensure context is still valid
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    showAppSnackBar(context, 'Memperbarui status pasien...');
+                  }
+                });
+
+                final patientApiService = PatientApiService();
+                final apiResult = await patientApiService.updatePatientStatus(
+                  doctorId: ref.read(userProvider)?.id ?? 0,
+                  patientId: patient.patientId,
+                  status: newStatus,
+                  notes: newNotes,
+                );
+
+                if (apiResult != null) {
+                  print(
+                    '[StatusUpdate] API call successful, force refreshing data',
+                  );
+
+                  // Force complete refresh from server to ensure UI matches database
+                  await ref
+                      .read(doctorPatientsProvider.notifier)
+                      .forceRefresh();
+                  print('[StatusUpdate] Force refresh completed');
+
+                  // Show success message using post-frame callback
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      showAppSnackBar(
+                        context,
+                        'Status pasien berhasil diperbarui',
+                        isSuccess: true,
+                      );
+                    }
+                  });
+                } else {
+                  print('[StatusUpdate] API call failed');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (context.mounted) {
+                      showAppSnackBar(
+                        context,
+                        'Gagal memperbarui status pasien',
+                        isError: true,
+                      );
+                    }
+                  });
+                }
+              } catch (e) {
+                print('[StatusUpdate] Error: $e');
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    showAppSnackBar(
+                      context,
+                      'Terjadi kesalahan: ${e.toString()}',
+                      isError: true,
+                    );
+                  }
+                });
+              }
+            },
+          ),
+    );
+  }
 }
 
 /// Widget daftar pasien dengan medical card styling dan responsive design
@@ -415,12 +528,16 @@ class PatientList extends StatelessWidget {
   final List<DoctorPatient> patients;
   final void Function(DoctorPatient) onDetail;
   final void Function(DoctorPatient) onDelete;
+  final void Function(DoctorPatient)? onViewHistory;
+  final void Function(DoctorPatient)? onStatusEdit;
 
   const PatientList({
     super.key,
     required this.patients,
     required this.onDetail,
     required this.onDelete,
+    this.onViewHistory,
+    this.onStatusEdit,
   });
 
   @override
@@ -443,9 +560,16 @@ class PatientList extends StatelessWidget {
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
           child: PatientCard(
+            key: ValueKey(
+              'patient_card_${patient.patientId}_${patient.status}_${patient.notes?.hashCode ?? 0}',
+            ),
             patient: patient,
             onTap: () => onDetail(patient),
             onDelete: () => onDelete(patient),
+            onViewHistory:
+                onViewHistory != null ? () => onViewHistory!(patient) : null,
+            onStatusEdit:
+                onStatusEdit != null ? () => onStatusEdit!(patient) : null,
           ),
         );
       }),
@@ -458,17 +582,24 @@ class PatientList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        childAspectRatio: 2.5, // Adjusted for better fit
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
       ),
       itemCount: patients.length,
       itemBuilder: (context, index) {
         final patient = patients[index];
         return PatientCard(
+          key: ValueKey(
+            'patient_grid_${patient.patientId}_${patient.status}_${patient.notes?.hashCode ?? 0}',
+          ),
           patient: patient,
           onTap: () => onDetail(patient),
           onDelete: () => onDelete(patient),
+          onViewHistory:
+              onViewHistory != null ? () => onViewHistory!(patient) : null,
+          onStatusEdit:
+              onStatusEdit != null ? () => onStatusEdit!(patient) : null,
           isCompact: true,
         );
       },
@@ -481,6 +612,8 @@ class PatientCard extends StatelessWidget {
   final DoctorPatient patient;
   final VoidCallback onTap;
   final VoidCallback onDelete;
+  final VoidCallback? onViewHistory;
+  final VoidCallback? onStatusEdit;
   final bool isCompact;
 
   const PatientCard({
@@ -488,6 +621,8 @@ class PatientCard extends StatelessWidget {
     required this.patient,
     required this.onTap,
     required this.onDelete,
+    this.onViewHistory,
+    this.onStatusEdit,
     this.isCompact = false,
   });
 
@@ -501,18 +636,18 @@ class PatientCard extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(4),
+            padding: EdgeInsets.all(isCompact ? 8 : 12),
             child: Row(
               children: [
                 // Avatar dengan initial
                 Semantics(
                   label: 'Avatar ${patient.name}',
                   child: Container(
-                    width: isCompact ? 40 : 56,
-                    height: isCompact ? 40 : 56,
+                    width: isCompact ? 36 : 48,
+                    height: isCompact ? 36 : 48,
                     decoration: BoxDecoration(
                       gradient: AppColors.primaryGradient,
-                      borderRadius: BorderRadius.circular(isCompact ? 20 : 28),
+                      borderRadius: BorderRadius.circular(isCompact ? 18 : 24),
                     ),
                     child: Center(
                       child: Text(
@@ -520,36 +655,39 @@ class PatientCard extends StatelessWidget {
                         style: AppTextStyles.titleMedium.copyWith(
                           color: AppColors.medicalWhite,
                           fontWeight: FontWeight.w600,
-                          fontSize: isCompact ? 14 : 16,
+                          fontSize: isCompact ? 12 : 14,
                         ),
                       ),
                     ),
                   ),
                 ),
 
-                SizedBox(width: isCompact ? 12 : 16),
+                SizedBox(width: isCompact ? 8 : 12),
 
-                // Patient Info
+                // Patient Info - Expanded to take available space
                 Expanded(
+                  flex: 4,
                   child: Semantics(
                     label: 'Informasi pasien',
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           patient.name,
                           style: (isCompact
-                                  ? AppTextStyles.titleSmall
+                                  ? AppTextStyles.bodyMedium
                                   : AppTextStyles.titleMedium)
                               .copyWith(color: AppColors.textPrimary),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: isCompact ? 2 : 4),
                         Text(
                           patient.email,
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
+                            fontSize: isCompact ? 10 : 12,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -560,14 +698,19 @@ class PatientCard extends StatelessWidget {
                             children: [
                               Icon(
                                 Icons.cake_outlined,
-                                size: 14,
+                                size: 12,
                                 color: AppColors.textTertiary,
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                _formatDate(patient.birthDate!),
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: AppColors.textTertiary,
+                              Expanded(
+                                child: Text(
+                                  _formatDate(patient.birthDate!),
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: AppColors.textTertiary,
+                                    fontSize: 10,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -578,37 +721,157 @@ class PatientCard extends StatelessWidget {
                   ),
                 ),
 
-                // Action buttons
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Semantics(
-                      label: 'Detail pasien ${patient.name}',
-                      hint: 'Ketuk untuk melihat informasi lengkap pasien',
-                      child: IconButton(
-                        onPressed: onTap,
-                        icon: Icon(
-                          Icons.info_outline,
-                          color: AppColors.primaryBlue,
-                          size: isCompact ? 20 : 24,
-                        ),
-                        tooltip: 'Detail Pasien',
-                      ),
-                    ),
-                    Semantics(
-                      label: 'Hapus pasien ${patient.name}',
-                      hint: 'Ketuk untuk menghapus pasien dari daftar Anda',
-                      child: IconButton(
-                        onPressed: onDelete,
-                        icon: Icon(
-                          Icons.delete_outline,
-                          color: AppColors.medicalRed,
-                          size: isCompact ? 20 : 24,
-                        ),
-                        tooltip: 'Hapus Pasien',
-                      ),
-                    ),
-                  ],
+                SizedBox(width: isCompact ? 4 : 8),
+
+                // Action buttons - Constrained width to prevent overflow
+                Expanded(
+                  flex: 3,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // If we have very little space, show only essential controls
+                      final hasVeryLittleSpace = constraints.maxWidth < 100;
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          // Status badge - Always visible but adapts to space
+                          Flexible(
+                            child: Semantics(
+                              label:
+                                  'Status ${patient.status ?? "tidak diketahui"}',
+                              hint: 'Ketuk untuk mengubah status pasien',
+                              child: _StatusBadge(
+                                key: ValueKey(
+                                  'status_badge_${patient.patientId}_${patient.status}_${patient.notes?.hashCode ?? 0}',
+                                ),
+                                status: patient.status ?? 'active',
+                                onTap: onStatusEdit ?? () {},
+                                isCompact: isCompact || hasVeryLittleSpace,
+                              ),
+                            ),
+                          ),
+
+                          // Action buttons - Show based on available space
+                          if (!isCompact && !hasVeryLittleSpace) ...[
+                            if (onViewHistory != null)
+                              Semantics(
+                                label: 'Riwayat monitoring ${patient.name}',
+                                hint:
+                                    'Ketuk untuk melihat riwayat monitoring pasien',
+                                child: IconButton(
+                                  onPressed: onViewHistory,
+                                  icon: Icon(
+                                    Icons.timeline,
+                                    color: AppColors.medicalGreen,
+                                    size: 18,
+                                  ),
+                                  tooltip: 'Riwayat',
+                                  padding: const EdgeInsets.all(2),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 28,
+                                    minHeight: 28,
+                                  ),
+                                ),
+                              ),
+                            Semantics(
+                              label: 'Detail pasien ${patient.name}',
+                              hint:
+                                  'Ketuk untuk melihat informasi lengkap pasien',
+                              child: IconButton(
+                                onPressed: onTap,
+                                icon: Icon(
+                                  Icons.info_outline,
+                                  color: AppColors.primaryBlue,
+                                  size: 18,
+                                ),
+                                tooltip: 'Detail',
+                                padding: const EdgeInsets.all(2),
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
+                                ),
+                              ),
+                            ),
+                            Semantics(
+                              label: 'Hapus pasien ${patient.name}',
+                              hint:
+                                  'Ketuk untuk menghapus pasien dari daftar Anda',
+                              child: IconButton(
+                                onPressed: onDelete,
+                                icon: Icon(
+                                  Icons.delete_outline,
+                                  color: AppColors.medicalRed,
+                                  size: 18,
+                                ),
+                                tooltip: 'Hapus',
+                                padding: const EdgeInsets.all(2),
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            // Compact mode or very little space - Show minimal dropdown
+                            PopupMenuButton<String>(
+                              onSelected: (value) {
+                                switch (value) {
+                                  case 'detail':
+                                    onTap();
+                                    break;
+                                  case 'history':
+                                    onViewHistory?.call();
+                                    break;
+                                  case 'delete':
+                                    onDelete();
+                                    break;
+                                }
+                              },
+                              itemBuilder:
+                                  (context) => [
+                                    const PopupMenuItem(
+                                      value: 'detail',
+                                      child: ListTile(
+                                        leading: Icon(Icons.info_outline),
+                                        title: Text('Detail'),
+                                        dense: true,
+                                      ),
+                                    ),
+                                    if (onViewHistory != null)
+                                      const PopupMenuItem(
+                                        value: 'history',
+                                        child: ListTile(
+                                          leading: Icon(Icons.timeline),
+                                          title: Text('Riwayat'),
+                                          dense: true,
+                                        ),
+                                      ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: ListTile(
+                                        leading: Icon(Icons.delete_outline),
+                                        title: Text('Hapus'),
+                                        dense: true,
+                                      ),
+                                    ),
+                                  ],
+                              icon: Icon(
+                                Icons.more_vert,
+                                color: AppColors.textSecondary,
+                                size: 16,
+                              ),
+                              padding: const EdgeInsets.all(2),
+                              constraints: const BoxConstraints(
+                                minWidth: 20,
+                                minHeight: 20,
+                              ),
+                            ),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -647,6 +910,131 @@ class PatientCard extends StatelessWidget {
       return dateStr;
     }
   }
+}
+
+/// Status badge widget that shows patient status and allows editing
+class _StatusBadge extends StatelessWidget {
+  final String status;
+  final VoidCallback onTap;
+  final bool isCompact;
+
+  const _StatusBadge({
+    super.key,
+    required this.status,
+    required this.onTap,
+    this.isCompact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Debug logging
+    print('[StatusBadge] Rendering status: $status at ${DateTime.now()}');
+    print('[StatusBadge] Widget key: $key');
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: isCompact ? 3 : 4,
+          vertical: isCompact ? 1 : 2,
+        ),
+        decoration: BoxDecoration(
+          color: _getStatusColor(status).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: _getStatusColor(status).withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _getStatusIcon(status),
+              size: isCompact ? 8 : 10,
+              color: _getStatusColor(status),
+            ),
+            if (!isCompact) ...[
+              const SizedBox(width: 2),
+              Flexible(
+                child: Text(
+                  _getStatusDisplay(status),
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w500,
+                    color: _getStatusColor(status),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 2),
+            ] else
+              const SizedBox(width: 1),
+            Icon(
+              Icons.edit,
+              size: isCompact ? 6 : 8,
+              color: _getStatusColor(status).withOpacity(0.7),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return AppColors.medicalGreen;
+      case 'inactive':
+        return AppColors.medicalOrange;
+      case 'discharged':
+        return AppColors.primaryBlue;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return Icons.check_circle;
+      case 'inactive':
+        return Icons.pause_circle;
+      case 'discharged':
+        return Icons.assignment_turned_in;
+      default:
+        return Icons.help_outline;
+    }
+  }
+
+  String _getStatusDisplay(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+        return 'Aktif';
+      case 'inactive':
+        return 'Tidak Aktif';
+      case 'discharged':
+        return 'Selesai';
+      default:
+        return 'Tidak Diketahui';
+    }
+  }
+}
+
+class _DetailItem {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isMultiline;
+
+  _DetailItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.isMultiline = false,
+  });
 }
 
 /// Dialog konfirmasi hapus pasien dengan tema medical
@@ -1054,6 +1442,12 @@ class PatientDetailDialog extends StatelessWidget {
                   label: 'Email',
                   value: patient.email,
                 ),
+                if (patient.age != null)
+                  _DetailItem(
+                    icon: Icons.cake_outlined,
+                    label: 'Usia',
+                    value: '${patient.age} tahun',
+                  ),
                 _DetailItem(
                   icon: Icons.cake_outlined,
                   label: 'Tanggal Lahir',
@@ -1062,6 +1456,18 @@ class PatientDetailDialog extends StatelessWidget {
                           ? _formatDate(patient.birthDate!)
                           : 'Tidak tersedia',
                 ),
+                if (patient.gender != null)
+                  _DetailItem(
+                    icon: Icons.wc_outlined,
+                    label: 'Jenis Kelamin',
+                    value: patient.gender!,
+                  ),
+                if (patient.phone != null)
+                  _DetailItem(
+                    icon: Icons.phone_outlined,
+                    label: 'Nomor Telepon',
+                    value: patient.phone!,
+                  ),
                 _DetailItem(
                   icon: Icons.location_on_outlined,
                   label: 'Alamat',
@@ -1184,18 +1590,4 @@ class PatientDetailDialog extends StatelessWidget {
       return dateStr;
     }
   }
-}
-
-class _DetailItem {
-  final IconData icon;
-  final String label;
-  final String value;
-  final bool isMultiline;
-
-  _DetailItem({
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.isMultiline = false,
-  });
 }
