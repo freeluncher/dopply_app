@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:dopply_app/shared/services/token_storage_service.dart';
 
 /// Service utama untuk operasi monitoring dokter (kirim hasil, ambil pasien, klasifikasi BPM)
 class MonitoringApiService {
@@ -67,7 +67,7 @@ class MonitoringApiService {
     required int doctorId,
     String? search,
   }) async {
-    final token = await AuthLocalDataSource().getToken(); // Ambil token login
+    final token = await TokenStorageService().getToken(); // Ambil token login
     if (token == null) {
       print('Token tidak ditemukan, user belum login.');
       return [];
