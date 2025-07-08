@@ -6,13 +6,16 @@ class AccountViewModelPatient extends ChangeNotifier {
   String? error;
   String? success;
 
-  Future<void> changeEmail(String newEmail) async {
+  Future<void> changeEmail(String newEmail, String password) async {
     isLoading = true;
     error = null;
     success = null;
     notifyListeners();
     final api = AccountApiServicePatient();
-    final result = await api.changeEmail(newEmail: newEmail);
+    final result = await api.changeEmail(
+      newEmail: newEmail,
+      password: password,
+    );
     isLoading = false;
     if (result) {
       success = 'Email berhasil diubah';
@@ -22,14 +25,17 @@ class AccountViewModelPatient extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> changePassword(String oldPassword, String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     isLoading = true;
     error = null;
     success = null;
     notifyListeners();
     final api = AccountApiServicePatient();
     final result = await api.changePassword(
-      oldPassword: oldPassword,
+      currentPassword: currentPassword,
       newPassword: newPassword,
     );
     isLoading = false;
