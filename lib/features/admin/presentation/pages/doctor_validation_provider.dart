@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
-import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:dopply_app/shared/services/token_storage_service.dart';
 
 final _secureStorage = FlutterSecureStorage();
 
@@ -12,11 +12,13 @@ Future<String?> getAdminToken() async {
 }
 
 final doctorValidationCountProvider = FutureProvider<int>((ref) async {
-  final localDataSource = AuthLocalDataSource();
-  final token = await localDataSource.getToken();
+  final tokenStorage = TokenStorageService();
+  final token = await tokenStorage.getToken();
   if (token == null) return 0;
   final response = await http.get(
-    Uri.parse('https://dopply.my.id/v1/admin/doctor/validation-requests/count'),
+    Uri.parse(
+      'https://dopply.my.id/api/v1/admin/doctor/validation-requests/count',
+    ), // ✅ Fixed: Correct endpoint
     headers: {'Authorization': 'Bearer $token'},
   );
   if (response.statusCode == 200) {

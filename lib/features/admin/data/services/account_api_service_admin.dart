@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:dopply_app/shared/services/token_storage_service.dart';
 
 /// Service API untuk fitur admin: manajemen akun dan user.
 /// Semua request membutuhkan token autentikasi admin.
@@ -9,18 +9,25 @@ class AccountApiServiceAdmin {
 
   /// Mengubah email admin.
   /// [newEmail]: email baru yang akan disimpan.
+  /// [password]: password saat ini untuk verifikasi.
   /// Return true jika berhasil, false jika gagal.
-  Future<bool> changeEmail({required String newEmail}) async {
-    final token = await AuthLocalDataSource().getToken();
+  Future<bool> changeEmail({
+    required String newEmail,
+    required String password,
+  }) async {
+    final token = await TokenStorageService().getToken();
     if (token == null) return false;
     try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/admin/account/email'),
+      final response = await http.put(
+        Uri.parse('$_baseUrl/account/email'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'email': newEmail}),
+        body: jsonEncode({
+          'new_email': newEmail,
+          'password': password, // ✅ Required for verification
+        }),
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -30,24 +37,24 @@ class AccountApiServiceAdmin {
   }
 
   /// Mengubah password admin.
-  /// [oldPassword]: password lama, [newPassword]: password baru.
+  /// [currentPassword]: password saat ini, [newPassword]: password baru.
   /// Return true jika berhasil, false jika gagal.
   Future<bool> changePassword({
-    required String oldPassword,
+    required String currentPassword,
     required String newPassword,
   }) async {
-    final token = await AuthLocalDataSource().getToken();
+    final token = await TokenStorageService().getToken();
     if (token == null) return false;
     try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/admin/account/password'),
+      final response = await http.put(
+        Uri.parse('$_baseUrl/account/password'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'old_password': oldPassword,
-          'new_password': newPassword,
+          'current_password': currentPassword, // ✅ Fixed field name
+          'new_password': newPassword, // ✅ Fixed field name
         }),
       );
       return response.statusCode == 200;
@@ -60,11 +67,11 @@ class AccountApiServiceAdmin {
   /// Mengambil daftar seluruh user (pasien, dokter, admin) untuk manajemen user.
   /// Return List user (Map) jika berhasil, null jika gagal.
   Future<List<Map<String, dynamic>>?> getUsers() async {
-    final token = await AuthLocalDataSource().getToken();
+    final token = await TokenStorageService().getToken();
     if (token == null) return null;
     try {
       final response = await http.get(
-        Uri.parse('$_baseUrl/admin/users'),
+        Uri.parse('$_baseUrl/users'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -83,11 +90,11 @@ class AccountApiServiceAdmin {
   /// [userData]: Map data user (name, email, role, dll).
   /// Return true jika berhasil, false jika gagal.
   Future<bool> createUser(Map<String, dynamic> userData) async {
-    final token = await AuthLocalDataSource().getToken();
+    final token = await TokenStorageService().getToken();
     if (token == null) return false;
     try {
       final response = await http.post(
-        Uri.parse('$_baseUrl/admin/users'),
+        Uri.parse('$_baseUrl/users'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -105,11 +112,11 @@ class AccountApiServiceAdmin {
   /// [userData]: Map data user yang akan diupdate.
   /// Return true jika berhasil, false jika gagal.
   Future<bool> updateUser(String userId, Map<String, dynamic> userData) async {
-    final token = await AuthLocalDataSource().getToken();
+    final token = await TokenStorageService().getToken();
     if (token == null) return false;
     try {
       final response = await http.put(
-        Uri.parse('$_baseUrl/admin/users/$userId'),
+        Uri.parse('$_baseUrl/users/$userId'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -126,11 +133,11 @@ class AccountApiServiceAdmin {
   /// Menghapus user berdasarkan [userId].
   /// Return true jika berhasil, false jika gagal.
   Future<bool> deleteUser(String userId) async {
-    final token = await AuthLocalDataSource().getToken();
+    final token = await TokenStorageService().getToken();
     if (token == null) return false;
     try {
       final response = await http.delete(
-        Uri.parse('$_baseUrl/admin/users/$userId'),
+        Uri.parse('$_baseUrl/users/$userId'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
