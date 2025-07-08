@@ -1,22 +1,29 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:dopply_app/features/auth/data/datasources/auth_local_datasource.dart';
+import 'package:dopply_app/shared/services/token_storage_service.dart';
 
 class AccountApiServicePatient {
   final String _baseUrl = 'https://dopply.my.id/api/v1';
 
   /// Ganti email pasien
-  Future<bool> changeEmail({required String newEmail}) async {
-    final token = await AuthLocalDataSource().getToken();
+  /// Requires password verification
+  Future<bool> changeEmail({
+    required String newEmail,
+    required String password,
+  }) async {
+    final token = await TokenStorageService().getToken();
     if (token == null) return false;
     try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/patient/account/email'),
+      final response = await http.put(
+        Uri.parse('$_baseUrl/account/email'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({'email': newEmail}),
+        body: jsonEncode({
+          'new_email': newEmail, // ✅ Fixed field name
+          'password': password, // ✅ Required for verification
+        }),
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -27,21 +34,21 @@ class AccountApiServicePatient {
 
   /// Ganti password pasien
   Future<bool> changePassword({
-    required String oldPassword,
+    required String currentPassword,
     required String newPassword,
   }) async {
-    final token = await AuthLocalDataSource().getToken();
+    final token = await TokenStorageService().getToken();
     if (token == null) return false;
     try {
-      final response = await http.patch(
-        Uri.parse('$_baseUrl/patient/account/password'),
+      final response = await http.put(
+        Uri.parse('$_baseUrl/account/password'), // ✅ Fixed: Universal endpoint
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
         },
         body: jsonEncode({
-          'old_password': oldPassword,
-          'new_password': newPassword,
+          'current_password': currentPassword, // ✅ Fixed field name
+          'new_password': newPassword, // ✅ Fixed field name
         }),
       );
       return response.statusCode == 200;
