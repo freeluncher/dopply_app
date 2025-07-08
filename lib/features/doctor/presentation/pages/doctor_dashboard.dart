@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dopply_app/features/auth/presentation/viewmodels/user_provider.dart';
+import 'package:dopply_app/features/auth/presentation/providers/user_provider.dart';
 import 'package:dopply_app/app/theme.dart';
 import 'package:dopply_app/features/doctor/presentation/viewmodels/doctor_quick_stats_notifier.dart';
 import 'package:dopply_app/features/doctor/presentation/viewmodels/doctor_patients_notifier.dart';
+import 'package:dopply_app/shared/services/token_storage_service.dart';
 
 /// Dashboard utama untuk dokter, menampilkan menu navigasi dan status verifikasi akun
 class DoctorDashboard extends ConsumerWidget {
@@ -18,7 +19,14 @@ class DoctorDashboard extends ConsumerWidget {
     // Load quick stats saat build pertama kali
     ref.listen(userProvider, (previous, next) {
       if (next?.doctorId != null && next?.doctorId != previous?.doctorId) {
-        ref.read(doctorQuickStatsProvider.notifier).loadStats(next!.doctorId);
+        print('[DASHBOARD] 👤 User changed - Doctor ID: ${next?.doctorId}');
+
+        // Debug token before API calls
+        _debugTokenStatus();
+
+        ref
+            .read(doctorQuickStatsProvider.notifier)
+            .loadStats(next!.doctorId?.toString());
       }
     });
 
@@ -203,7 +211,7 @@ class DoctorDashboard extends ConsumerWidget {
         if (user?.doctorId != null) {
           await ref
               .read(doctorQuickStatsProvider.notifier)
-              .refreshStats(user!.doctorId);
+              .refreshStats(user!.doctorId?.toString());
           await ref.read(doctorPatientsProvider.notifier).fetchPatients();
         }
       },
@@ -314,6 +322,21 @@ class DoctorDashboard extends ConsumerWidget {
     if (hour < 18) return 'Selamat Sore';
     return 'Selamat Malam';
   }
+
+  /// Debug method untuk memeriksa status token
+  Future<void> _debugTokenStatus() async {
+    try {
+      print('[DASHBOARD] 🔍 === TOKEN DEBUG START ===');
+
+      // Import TokenStorageService
+      final tokenService = TokenStorageService();
+      await tokenService.debugSessionInfo();
+
+      print('[DASHBOARD] 🔍 === TOKEN DEBUG END ===');
+    } catch (e) {
+      print('[DASHBOARD] ❌ Token debug error: $e');
+    }
+  }
 }
 
 /// Widget untuk warning verifikasi akun dokter
@@ -392,6 +415,14 @@ class DoctorMenu extends ConsumerWidget {
         route: '/doctor/patients',
         enabled: isValid,
         color: AppColors.primaryBlue,
+      ),
+      DoctorMenuItem(
+        icon: Icons.medical_information,
+        title: 'Rekam Medis',
+        subtitle: 'Akses rekam medis dan riwayat monitoring pasien',
+        route: '/doctor/medical-records',
+        enabled: isValid,
+        color: AppColors.medicalGreen,
       ),
       DoctorMenuItem(
         icon: Icons.history,
