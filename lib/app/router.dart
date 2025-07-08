@@ -17,12 +17,12 @@
 //   '/adminDashboard'         : AdminDashboard
 //   '/admin/users'            : ManageUsersPage (manajemen user admin)
 //   '/doctorDashboard'        : DoctorDashboard
-//   '/doctor/monitoring'      : MonitoringPage (dokter)
+//   '/doctor/monitoring'      : ModernFetalMonitoringPage (dokter)
 //   '/doctor/patient-history' : PatientHistoryPage (dokter)
 //   '/doctor/patient-history/:id' : PatientHistoryDetailPage (dokter)
 //   '/doctor/patients'        : DoctorPatientsPage
 //   '/patientDashboard'       : PatientDashboard
-//   '/patient/self-monitoring': MonitoringPagePatient
+//   '/patient/self-monitoring': ModernFetalMonitoringPagePatient
 //   '/patient/history'        : MonitoringHistoryPagePatient
 //   '/patient/account-settings': AccountSettingsPagePatient
 //   '/account-settings'       : AccountSettingsPage (umum)
@@ -47,26 +47,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-// Import halaman-halaman utama
-import '../features/auth/presentation/pages/login_page.dart';
-import '../features/admin/presentation/pages/admin_dashboard.dart';
-import '../features/auth/presentation/pages/register_page.dart';
-import '../features/auth/presentation/pages/splash_screen.dart';
-import '../features/doctor/presentation/pages/doctor_dashboard.dart';
+// Import halaman-halaman utama - New Structure
+import '../features/auth/presentation/login_page.dart';
+import '../features/auth/presentation/register_page.dart';
+import '../features/auth/presentation/splash_screen.dart';
+import '../features/auth/presentation/account_settings_page.dart';
+
+// Doctor feature imports
+import '../features/doctor/presentation/pages/medical_records_page.dart';
+import '../features/doctor/presentation/pages/patient_monitoring_history_page.dart';
+import '../features/doctor/data/models/doctor_patient.dart';
+
+// Old structure imports (to be migrated)
+import '../features/dashboard/admin/presentation/pages/admin_dashboard.dart';
+import '../features/dashboard/doctor/presentation/pages/doctor_dashboard.dart';
 import '../features/patient/presentation/pages/patient_dashboard.dart';
-import '../features/doctor/presentation/pages/monitoring_page.dart';
 import '../features/doctor/presentation/pages/patient_history_page.dart';
 import '../features/doctor/presentation/pages/patient_history_detail_page.dart';
-import '../features/auth/presentation/pages/account_settings_page.dart';
 import '../features/admin/presentation/pages/manage_users_page.dart';
 import '../features/doctor/presentation/pages/doctor_patients_page.dart';
-import '../features/patient/presentation/pages/monitoring_page_patient.dart';
 import 'package:dopply_app/features/patient/presentation/pages/monitoring_history_page_patient.dart';
 import 'package:dopply_app/features/patient/presentation/pages/account_settings_page_patient.dart';
 import 'package:dopply_app/features/doctor/data/models/patient_history_record.dart';
-// import fitur lain sesuai kebutuhan...
-import '../features/auth/presentation/viewmodels/user_provider.dart';
-import '../core/services/auth_guard_service.dart';
+
+// New modern monitoring pages
+import '../features/doctor/presentation/pages/modern_fetal_monitoring_page.dart';
+import '../features/patient/presentation/pages/modern_fetal_monitoring_page_patient.dart';
+
+// Import services and providers
+import '../features/auth/presentation/providers/user_provider.dart';
+import '../shared/services/auth_guard_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -99,7 +109,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/doctor/monitoring',
-        builder: (context, state) => const MonitoringPage(),
+        builder: (context, state) => const ModernFetalMonitoringPage(),
       ),
       GoRoute(
         path: '/doctor/add-patient',
@@ -136,13 +146,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const DoctorPatientsPage(),
       ),
       GoRoute(
+        path: '/doctor/medical-records',
+        builder: (context, state) => const MedicalRecordsPage(),
+      ),
+      GoRoute(
+        path: '/doctor/patient-monitoring-history',
+        builder: (context, state) {
+          final patient = state.extra as DoctorPatient;
+          return PatientMonitoringHistoryPage(patient: patient);
+        },
+      ),
+      GoRoute(
         path: '/patientDashboard',
         name: 'patientDashboard',
         builder: (context, state) => const PatientDashboard(),
       ),
       GoRoute(
         path: '/patient/self-monitoring',
-        builder: (context, state) => const MonitoringPagePatient(),
+        builder: (context, state) => const ModernFetalMonitoringPagePatient(),
       ),
       GoRoute(
         path: '/patient/history',
@@ -161,25 +182,101 @@ final routerProvider = Provider<GoRouter>((ref) {
       //   name: 'patientDashboard',
       //   builder: (context, state) => const PatientDashboard(),
       // ),
-      // Tambahkan rute lain sesuai kebutuhan...
+      // Admin Routes
       GoRoute(
         path: '/admin/users',
         name: 'adminUsers',
         builder: (context, state) => const ManageUsersPage(),
       ),
       GoRoute(
-        path: '/admin/reports',
-        name: 'adminReports',
+        path: '/admin/doctor-validation',
+        name: 'adminDoctorValidation',
         builder:
-            (context, state) =>
-                Scaffold(body: Center(child: Text('Laporan Admin'))),
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('Doctor Validation')),
+              body: const Center(child: Text('Doctor Validation Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/analytics',
+        name: 'adminAnalytics',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('System Analytics')),
+              body: const Center(child: Text('System Analytics Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/content',
+        name: 'adminContent',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('Content Management')),
+              body: const Center(child: Text('Content Management Page')),
+            ),
       ),
       GoRoute(
         path: '/admin/settings',
         name: 'adminSettings',
         builder:
-            (context, state) =>
-                Scaffold(body: Center(child: Text('Pengaturan Admin'))),
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('System Settings')),
+              body: const Center(child: Text('System Settings Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/api',
+        name: 'adminApi',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('API Management')),
+              body: const Center(child: Text('API Management Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/security',
+        name: 'adminSecurity',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('Security Center')),
+              body: const Center(child: Text('Security Center Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/backup',
+        name: 'adminBackup',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('Backup & Restore')),
+              body: const Center(child: Text('Backup & Restore Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/alerts',
+        name: 'adminAlerts',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('System Alerts')),
+              body: const Center(child: Text('System Alerts Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/activities',
+        name: 'adminActivities',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('System Activities')),
+              body: const Center(child: Text('System Activities Page')),
+            ),
+      ),
+      GoRoute(
+        path: '/admin/reports',
+        name: 'adminReports',
+        builder:
+            (context, state) => Scaffold(
+              appBar: AppBar(title: const Text('Reports')),
+              body: const Center(child: Text('Admin Reports Page')),
+            ),
       ),
     ],
     redirect: (context, state) {
