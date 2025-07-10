@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/doctor_dashboard_providers.dart';
-import '../pages/doctor_dashboard.dart';
+import '../../../../../features/auth/presentation/providers/user_provider.dart';
 import '../widgets/patient_card.dart';
 import '../widgets/assign_patient_dialog.dart';
 
@@ -40,8 +40,8 @@ class _PatientManagementPageState extends ConsumerState<PatientManagementPage> {
   }
 
   void _loadPatients() {
-    // Get doctor ID from dashboard user provider
-    final user = ref.read(dashboardUserProvider);
+    // Get doctor ID from user provider
+    final user = ref.read(userProvider);
     if (user != null) {
       ref
           .read(doctorPatientsProvider.notifier)

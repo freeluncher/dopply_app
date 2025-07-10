@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../services/api/doctor_api_service.dart';
-import '../pages/doctor_dashboard.dart';
+import '../../../../../features/auth/presentation/providers/user_provider.dart';
 import '../widgets/patient_card.dart';
 
 // Patient Monitoring State Management
@@ -145,7 +145,7 @@ class _PatientMonitoringPageState extends ConsumerState<PatientMonitoringPage> {
   }
 
   void _loadActivePatients() {
-    final user = ref.read(dashboardUserProvider);
+    final user = ref.read(userProvider);
     if (user != null) {
       ref.read(monitoringProvider.notifier).loadActivePatients(user.id);
     }

@@ -203,6 +203,16 @@ class AuthRepository {
     await _persistentAuth.updateUserData(user);
   }
 
+  /// Update stored user data in persistent storage
+  Future<void> updateStoredUserData(User user) async {
+    try {
+      await _persistentAuth.updateUserData(user);
+      print('[AUTH_REPO] 💾 User data updated in persistent storage');
+    } catch (e) {
+      print('[AUTH_REPO] ❌ Error updating stored user data: $e');
+    }
+  }
+
   /// Check if refresh tokens are supported by the backend
   /// NOTE: Backend now supports refresh tokens as of REFRESH_TOKEN_IMPLEMENTATION_COMPLETE
   Future<bool> isRefreshTokenSupported() async {

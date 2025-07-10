@@ -25,9 +25,9 @@ import '../../../../../shared/models/user.dart';
 import '../../../../../app/theme.dart';
 import 'dart:convert';
 import '../../../../../services/api/api_client.dart';
-
-// For now, create a simple user provider for the dashboard
-final dashboardUserProvider = StateProvider<User?>((ref) => null);
+// Import the global user provider used by account settings
+import '../../../../../features/auth/presentation/providers/user_provider.dart';
+import '../../../../../features/auth/presentation/providers/auth_repository_provider.dart';
 
 class DoctorDashboard extends ConsumerStatefulWidget {
   const DoctorDashboard({super.key});
@@ -45,29 +45,132 @@ class _DoctorDashboardState extends ConsumerState<DoctorDashboard> {
       final apiClient = ApiClient();
       final response = await apiClient.get('/token/verify');
       final data = json.decode(response.body);
-      debugPrint('[DASHBOARD] /token/verify response: ' + data.toString());
-      final newUser = User(
-        id: data['user_id'] ?? data['id'] ?? 0,
-        name: data['name'] ?? '',
-        email: data['email'] ?? '',
-        role: data['role'] ?? 'doctor',
-        isValid: data['is_valid'] ?? false,
+      debugPrint('[DASHBOARD] /token/verify response: ${data.toString()}');
+
+      // Get existing user data to preserve fields not returned by /token/verify
+      final existingUser = ref.read(userProvider);
+      debugPrint(
+        '[DASHBOARD] Existing user before refresh: ${existingUser?.toString()}',
       );
-      ref.read(dashboardUserProvider.notifier).state = newUser;
-      debugPrint('[DASHBOARD] Updated user: ' + newUser.toString());
+      debugPrint('[DASHBOARD] Existing photo URL: ${existingUser?.photoUrl}');
+      debugPrint('[DASHBOARD] API photo URL: ${data['photo_url']}');
+
+      // Only update if we get valid data from API
+      if (data['user_id'] != null || data['id'] != null) {
+        final newUser = User(
+          id: data['user_id'] ?? data['id'] ?? existingUser?.id ?? 0,
+          name: data['name'] ?? existingUser?.name ?? '',
+          email: data['email'] ?? existingUser?.email ?? '',
+          role: data['role'] ?? existingUser?.role ?? 'doctor',
+          isValid: data['is_valid'] ?? existingUser?.isValid ?? false,
+          // Preserve existing photo URL if API doesn't return one
+          photoUrl: data['photo_url'] ?? existingUser?.photoUrl,
+          // Preserve other existing fields
+          doctorId: existingUser?.doctorId,
+          birthDate: existingUser?.birthDate,
+          address: existingUser?.address,
+          medicalNote: existingUser?.medicalNote,
+        );
+
+        ref.read(userProvider.notifier).state = newUser;
+        debugPrint('[DASHBOARD] Updated user: ${newUser.toString()}');
+        debugPrint('[DASHBOARD] Final photo URL: ${newUser.photoUrl}');
+        debugPrint('[DASHBOARD] Final fullPhotoUrl: ${newUser.fullPhotoUrl}');
+
+        // Update persistent storage with merged data
+        await _updatePersistentStorageWithUser(newUser);
+      } else {
+        debugPrint(
+          '[DASHBOARD] Invalid API response, keeping existing user data',
+        );
+      }
     } catch (e, st) {
       debugPrint('[DASHBOARD] Error refreshing user: $e\n$st');
     }
   }
 
+  /// Update persistent storage with current user data
+  Future<void> _updatePersistentStorageWithUser(User user) async {
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      // Access the persistent auth service through auth repository
+      await authRepo.updateStoredUserData(user);
+      debugPrint(
+        '[DASHBOARD] Updated persistent storage with merged user data',
+      );
+    } catch (e, st) {
+      debugPrint('[DASHBOARD] Error updating persistent storage: $e\n$st');
+    }
+  }
+
   Future<void> _loadDashboardData() async {
+    debugPrint('[DASHBOARD] 🔄 Starting dashboard refresh...');
+    final userBefore = ref.read(userProvider);
+    debugPrint('[DASHBOARD] User before refresh: ${userBefore?.toString()}');
+    debugPrint('[DASHBOARD] Photo URL before refresh: ${userBefore?.photoUrl}');
+
     await _refreshUserFromApi();
-    final user = ref.read(dashboardUserProvider);
-    if (user != null && user.role == 'doctor') {
-      ref.read(doctorStatsProvider.notifier).loadStats(user.id.toString());
+
+    // If user data is still incomplete after API refresh, try auth repository
+    final user = ref.read(userProvider);
+    if (user == null || user.email.isEmpty) {
+      debugPrint(
+        '[DASHBOARD] User data incomplete, trying auth repository fallback...',
+      );
+      await _refreshUserFromAuthRepository();
+    }
+
+    final finalUser = ref.read(userProvider);
+    debugPrint(
+      '[DASHBOARD] ✅ Final user after refresh: ${finalUser?.toString()}',
+    );
+    debugPrint('[DASHBOARD] ✅ Final photo URL: ${finalUser?.photoUrl}');
+    debugPrint('[DASHBOARD] ✅ Final fullPhotoUrl: ${finalUser?.fullPhotoUrl}');
+
+    if (finalUser != null && finalUser.role == 'doctor') {
+      ref.read(doctorStatsProvider.notifier).loadStats(finalUser.id.toString());
       ref
           .read(doctorPatientsProvider.notifier)
-          .loadPatients(user.id.toString());
+          .loadPatients(finalUser.id.toString());
+    }
+  }
+
+  /// Alternative refresh method using auth repository as fallback
+  Future<void> _refreshUserFromAuthRepository() async {
+    try {
+      final authRepo = ref.read(authRepositoryProvider);
+      final user = await authRepo.getCurrentUserFromToken();
+      if (user != null) {
+        // Get existing user data to preserve any in-memory updates
+        final existingUser = ref.read(userProvider);
+
+        // Merge data, preferring existing photo URL if newer
+        final mergedUser = User(
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isValid: user.isValid,
+          // Preserve existing photo URL if it exists and is different
+          photoUrl: existingUser?.photoUrl ?? user.photoUrl,
+          doctorId: user.doctorId ?? existingUser?.doctorId,
+          birthDate: user.birthDate ?? existingUser?.birthDate,
+          address: user.address ?? existingUser?.address,
+          medicalNote: user.medicalNote ?? existingUser?.medicalNote,
+        );
+
+        ref.read(userProvider.notifier).state = mergedUser;
+        debugPrint(
+          '[DASHBOARD] Refreshed user from auth repository: ${mergedUser.toString()}',
+        );
+        debugPrint(
+          '[DASHBOARD] Final photo URL from auth repo: ${mergedUser.photoUrl}',
+        );
+      }
+    } catch (e, st) {
+      debugPrint(
+        '[DASHBOARD] Error refreshing user from auth repository: $e\n$st',
+      );
     }
   }
 
@@ -87,7 +190,7 @@ class _DoctorDashboardState extends ConsumerState<DoctorDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.watch(dashboardUserProvider);
+    final user = ref.watch(userProvider);
     final isValid = user?.isValid ?? false;
 
     return Scaffold(
@@ -283,23 +386,51 @@ class _DoctorDashboardState extends ConsumerState<DoctorDashboard> {
           ),
         ),
 
-        // Profile with modern design
+        // Profile with modern design and profile photo
         Container(
           margin: const EdgeInsets.only(right: 16),
-          child: IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
+          child: GestureDetector(
+            onTap: () => context.push('/account-settings'),
+            child: Container(
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: AppColors.medicalWhite.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: AppColors.medicalWhite.withOpacity(0.3),
+                  width: 1,
+                ),
               ),
-              child: const Icon(
-                Icons.account_circle_outlined,
-                color: AppColors.medicalWhite,
-                size: 20,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(11),
+                child:
+                    user?.fullPhotoUrl != null
+                        ? Image.network(
+                          user!.fullPhotoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback to icon if image fails to load
+                            return Container(
+                              padding: const EdgeInsets.all(8),
+                              child: const Icon(
+                                Icons.account_circle_outlined,
+                                color: AppColors.medicalWhite,
+                                size: 20,
+                              ),
+                            );
+                          },
+                        )
+                        : Container(
+                          padding: const EdgeInsets.all(8),
+                          child: const Icon(
+                            Icons.account_circle_outlined,
+                            color: AppColors.medicalWhite,
+                            size: 20,
+                          ),
+                        ),
               ),
             ),
-            onPressed: () => context.push('/account-settings'),
           ),
         ),
       ],

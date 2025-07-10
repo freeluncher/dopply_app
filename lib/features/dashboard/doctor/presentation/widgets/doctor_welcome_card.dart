@@ -45,18 +45,35 @@ class DoctorWelcomeCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Doctor Avatar
+              // Doctor Avatar with Profile Photo
               CircleAvatar(
                 radius: 30,
                 backgroundColor: const Color(0xFF2E8B57),
-                child: Text(
-                  _getInitials(user?.name),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                backgroundImage:
+                    user?.fullPhotoUrl != null
+                        ? NetworkImage(user!.fullPhotoUrl!)
+                        : user?.email != null
+                        ? NetworkImage(
+                          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(user!.email)}&background=2E8B57&color=fff&size=120',
+                        )
+                        : user?.name != null
+                        ? NetworkImage(
+                          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(user!.name)}&background=2E8B57&color=fff&size=120',
+                        )
+                        : null,
+                child:
+                    (user?.fullPhotoUrl == null &&
+                            user?.email == null &&
+                            user?.name == null)
+                        ? Text(
+                          _getInitials(user?.name),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                        : null,
               ),
 
               const SizedBox(width: 16),

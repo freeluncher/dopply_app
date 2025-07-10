@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../services/api/doctor_api_service.dart';
-import '../pages/doctor_dashboard.dart';
+import '../../../../../features/auth/presentation/providers/user_provider.dart';
 
 class AssignPatientDialog extends ConsumerStatefulWidget {
   const AssignPatientDialog({super.key});
@@ -118,7 +118,7 @@ class _AssignPatientDialogState extends ConsumerState<AssignPatientDialog> {
     setState(() => _isLoading = true);
 
     try {
-      final user = ref.read(dashboardUserProvider);
+      final user = ref.read(userProvider);
       if (user == null) {
         throw Exception('User not found');
       }

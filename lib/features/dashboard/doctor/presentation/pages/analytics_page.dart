@@ -7,7 +7,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../services/api/doctor_api_service.dart';
-import '../pages/doctor_dashboard.dart';
+import '../../../../../features/auth/presentation/providers/user_provider.dart';
 
 // Analytics State Management
 class AnalyticsState {
@@ -94,7 +94,7 @@ class _AnalyticsPageState extends ConsumerState<AnalyticsPage> {
   }
 
   void _loadAnalytics() {
-    final user = ref.read(dashboardUserProvider);
+    final user = ref.read(userProvider);
     if (user != null) {
       ref.read(analyticsProvider.notifier).loadAnalytics(user.id);
     }
