@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 // New structure imports
 import '../../../services/api/user_api_service.dart';
+import '../../../shared/models/user.dart';
 import 'providers/user_provider.dart';
 import 'providers/auth_repository_provider.dart';
 import 'providers/profile_photo_provider.dart';
@@ -20,6 +21,34 @@ import 'providers/profile_photo_provider.dart';
 /// Uses new API structure via UserApiService for consistency
 class AccountSettingsPage extends ConsumerWidget {
   const AccountSettingsPage({Key? key}) : super(key: key);
+
+  /// Helper method to get appropriate avatar image
+  ImageProvider? _getAvatarImage(User? user) {
+    if (user?.fullPhotoUrl != null) {
+      return NetworkImage(user!.fullPhotoUrl!);
+    }
+
+    if (user?.name != null && user!.name.isNotEmpty) {
+      return NetworkImage(
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(user.name)}&background=0D8ABC&color=fff',
+      );
+    }
+
+    if (user?.email != null && user!.email.isNotEmpty) {
+      return NetworkImage(
+        'https://ui-avatars.com/api/?name=${Uri.encodeComponent(user.email)}&background=0D8ABC&color=fff',
+      );
+    }
+
+    return null;
+  }
+
+  /// Helper method to determine if person icon should be shown
+  bool _shouldShowPersonIcon(User? user) {
+    return user?.fullPhotoUrl == null &&
+        (user?.name == null || user!.name.isEmpty) &&
+        (user?.email == null || user!.email.isEmpty);
+  }
 
   /// Shows dialog for changing user email
   void _showChangeEmailDialog(
@@ -292,16 +321,9 @@ class AccountSettingsPage extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 48,
-                  backgroundImage:
-                      user?.fullPhotoUrl != null
-                          ? NetworkImage(user!.fullPhotoUrl!)
-                          : user?.email != null
-                          ? NetworkImage(
-                            'https://ui-avatars.com/api/?name=${user!.email}&background=0D8ABC&color=fff',
-                          )
-                          : null,
+                  backgroundImage: _getAvatarImage(user),
                   child:
-                      user?.email == null
+                      _shouldShowPersonIcon(user)
                           ? const Icon(Icons.person, size: 48)
                           : null,
                 ),
@@ -367,9 +389,7 @@ class AccountSettingsPage extends ConsumerWidget {
                 const Divider(height: 1),
                 ListTile(
                   leading: const Icon(Icons.person, color: Colors.green),
-                  title: Text(
-                    user?.email ?? '-',
-                  ), // Using email as display name for now
+                  title: Text(user?.name ?? '-'),
                   subtitle: const Text('Nama'),
                 ),
                 const Divider(height: 1),
