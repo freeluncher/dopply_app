@@ -7,6 +7,14 @@ import 'dart:convert';
 /// Provider untuk MonitoringApiService
 final monitoringApiServiceProvider = Provider((ref) => MonitoringApiService());
 
+/// Provider untuk doctor list
+final doctorListProvider = FutureProvider<List<Map<String, dynamic>>>((
+  ref,
+) async {
+  final apiService = ref.read(monitoringApiServiceProvider);
+  return await apiService.getDoctorList();
+});
+
 /// Provider untuk monitoring history data
 final monitoringHistoryProvider = FutureProvider<List<Map<String, dynamic>>>((
   ref,
@@ -269,14 +277,18 @@ class MonitoringHistoryPagePatient extends ConsumerWidget {
         itemCount: history.length,
         itemBuilder: (context, index) {
           final item = history[index];
-          return _buildHistoryCard(context, item);
+          return _buildHistoryCard(context, ref, item);
         },
       ),
     );
   }
 
   /// Build individual history card
-  Widget _buildHistoryCard(BuildContext context, Map<String, dynamic> item) {
+  Widget _buildHistoryCard(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) {
     final classification = item['classification'] ?? 'unknown';
     final Color statusColor = _getStatusColor(classification);
     final IconData statusIcon = _getStatusIcon(classification);
@@ -286,7 +298,7 @@ class MonitoringHistoryPagePatient extends ConsumerWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => _showDetailDialog(context, item),
+        onTap: () => _showDetailDialog(context, ref, item),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -360,6 +372,9 @@ class MonitoringHistoryPagePatient extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
+                  // Share button or assigned doctor info
+                  _buildShareSection(context, ref, item),
+                  const SizedBox(width: 12),
                   Text(
                     'Lihat Detail',
                     style: AppTextStyles.labelMedium.copyWith(
@@ -382,7 +397,11 @@ class MonitoringHistoryPagePatient extends ConsumerWidget {
   }
 
   /// Show detail dialog
-  void _showDetailDialog(BuildContext context, Map<String, dynamic> item) {
+  void _showDetailDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) {
     showDialog(
       context: context,
       builder:
@@ -419,6 +438,9 @@ class MonitoringHistoryPagePatient extends ConsumerWidget {
                     'Klasifikasi',
                     _getStatusText(item['classification'] ?? 'unknown'),
                   ),
+                  // Show assigned doctor info if available
+                  if (_isAssignedToDoctor(item))
+                    _buildAssignedDoctorDetailRow(ref, item),
                   const SizedBox(height: 16),
                   Text(
                     'Data BPM:',
@@ -482,6 +504,50 @@ class MonitoringHistoryPagePatient extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  /// Build assigned doctor detail row for detail dialog
+  Widget _buildAssignedDoctorDetailRow(
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) {
+    // Check if doctor information is available directly from doctor_assignment
+    if (item['doctor_assignment'] != null && item['doctor_assignment'] is Map) {
+      final doctorAssignment =
+          item['doctor_assignment'] as Map<String, dynamic>;
+      final doctorName = doctorAssignment['doctor_name'] ?? 'Dokter';
+      return _buildDetailRow('Dokter', doctorName);
+    }
+
+    // Fallback: get doctor info from doctor list using doctor ID
+    final doctorId = _getAssignedDoctorId(item);
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final doctorListAsync = ref.watch(doctorListProvider);
+
+        return doctorListAsync.when(
+          loading: () => _buildDetailRow('Dokter', 'Loading...'),
+          error: (error, stack) => _buildDetailRow('Dokter', 'Dokter'),
+          data: (doctors) {
+            // Find the assigned doctor from the list
+            final assignedDoctor = doctors.firstWhere(
+              (doctor) => doctor['id'] == doctorId,
+              orElse: () => <String, dynamic>{},
+            );
+
+            final doctorName = assignedDoctor['name'] ?? 'Dokter';
+            final specialization = assignedDoctor['specialization'] ?? '';
+            final displayText =
+                specialization.isNotEmpty
+                    ? '$doctorName ($specialization)'
+                    : doctorName;
+
+            return _buildDetailRow('Dokter', displayText);
+          },
+        );
+      },
     );
   }
 
@@ -598,5 +664,580 @@ class MonitoringHistoryPagePatient extends ConsumerWidget {
     } catch (e) {
       return '-';
     }
+  }
+
+  /// Show share to doctor dialog
+  void _showShareDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Row(
+              children: [
+                const Icon(
+                  Icons.share,
+                  color: AppColors.medicalGreen,
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Share ke Dokter',
+                  style: AppTextStyles.titleLarge.copyWith(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final doctorListAsync = ref.watch(doctorListProvider);
+
+                  return doctorListAsync.when(
+                    loading:
+                        () => const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primaryBlue,
+                            ),
+                          ),
+                        ),
+                    error:
+                        (error, stack) => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.medicalRed,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Gagal memuat daftar dokter',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            TextButton(
+                              onPressed: () {
+                                ref.invalidate(doctorListProvider);
+                              },
+                              child: const Text('Coba Lagi'),
+                            ),
+                          ],
+                        ),
+                    data: (doctors) {
+                      if (doctors.isEmpty) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.info_outline,
+                              color: AppColors.medicalOrange,
+                              size: 48,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Belum ada dokter tersedia',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Pilih dokter untuk berbagi hasil monitoring:',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 300,
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              itemCount: doctors.length,
+                              itemBuilder: (context, index) {
+                                final doctor = doctors[index];
+                                return Card(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  child: ListTile(
+                                    leading: CircleAvatar(
+                                      backgroundColor: AppColors.primaryBlue,
+                                      child: const Icon(
+                                        Icons.local_hospital,
+                                        color: AppColors.medicalWhite,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      doctor['name'] ?? 'Dokter',
+                                      style: AppTextStyles.titleSmall.copyWith(
+                                        color: AppColors.textPrimary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      doctor['specialization'] ??
+                                          doctor['email'] ??
+                                          '',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                    trailing: const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                      color: AppColors.primaryBlue,
+                                    ),
+                                    onTap: () {
+                                      Navigator.of(context).pop();
+                                      _shareToDoctor(
+                                        context,
+                                        ref,
+                                        item,
+                                        doctor,
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(
+                  'Batal',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  /// Share monitoring result to selected doctor
+  Future<void> _shareToDoctor(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+    Map<String, dynamic> doctor,
+  ) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (context) => AlertDialog(
+            content: Row(
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                Text('Mengirim ke dokter...', style: AppTextStyles.bodyMedium),
+              ],
+            ),
+          ),
+    );
+
+    try {
+      final apiService = ref.read(monitoringApiServiceProvider);
+      final response = await apiService.shareMonitoringToDoctor(
+        monitoringId: item['id'] ?? 0,
+        doctorId: doctor['id'] ?? 0,
+      );
+
+      print('[SHARE_TO_DOCTOR] API Response: $response');
+
+      // Close loading dialog first
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show success dialog WITHOUT calling ref.invalidate immediately
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check_circle,
+                      color: AppColors.medicalGreen,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Berhasil!',
+                      style: AppTextStyles.titleLarge.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Hasil monitoring berhasil dibagikan ke ${doctor['name'] ?? 'dokter'}',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      // Refresh data ONLY after dialog is fully closed
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (context.mounted) {
+                          try {
+                            ref.invalidate(monitoringHistoryProvider);
+                            print(
+                              '[SHARE_TO_DOCTOR] Provider invalidated successfully',
+                            );
+                          } catch (e) {
+                            print(
+                              '[SHARE_TO_DOCTOR] Provider invalidation error: $e',
+                            );
+                          }
+                        }
+                      });
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.medicalGreen,
+                      foregroundColor: AppColors.medicalWhite,
+                    ),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+      }
+    } catch (e) {
+      print('[SHARE_TO_DOCTOR] Error: $e');
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Show error dialog
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: AppColors.medicalRed,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Gagal Mengirim',
+                      style: AppTextStyles.titleLarge.copyWith(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Terjadi kesalahan saat membagikan hasil monitoring: ${e.toString()}',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.medicalRed,
+                      foregroundColor: AppColors.medicalWhite,
+                    ),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+        );
+      }
+    }
+  }
+
+  /// Check if monitoring result is already assigned to a doctor
+  bool _isAssignedToDoctor(Map<String, dynamic> item) {
+    // Check if doctor_assignment field exists and is not null (new backend format)
+    if (item['doctor_assignment'] != null) {
+      return true;
+    }
+
+    // Fallback: check older field names for backwards compatibility
+    return item['doctor_id'] != null ||
+        item['shared_with'] != null ||
+        item['assigned_doctor_id'] != null ||
+        item['doctor'] != null;
+  }
+
+  /// Get assigned doctor ID
+  int? _getAssignedDoctorId(Map<String, dynamic> item) {
+    // Check new backend format first
+    if (item['doctor_assignment'] != null && item['doctor_assignment'] is Map) {
+      final doctorAssignment =
+          item['doctor_assignment'] as Map<String, dynamic>;
+      if (doctorAssignment['doctor_id'] != null) {
+        return doctorAssignment['doctor_id'] is int
+            ? doctorAssignment['doctor_id']
+            : int.tryParse(doctorAssignment['doctor_id'].toString());
+      }
+    }
+
+    // Fallback: check older field names for backwards compatibility
+    if (item['doctor_id'] != null) {
+      return item['doctor_id'] is int
+          ? item['doctor_id']
+          : int.tryParse(item['doctor_id'].toString());
+    }
+    if (item['shared_with'] != null) {
+      return item['shared_with'] is int
+          ? item['shared_with']
+          : int.tryParse(item['shared_with'].toString());
+    }
+    if (item['assigned_doctor_id'] != null) {
+      return item['assigned_doctor_id'] is int
+          ? item['assigned_doctor_id']
+          : int.tryParse(item['assigned_doctor_id'].toString());
+    }
+    if (item['doctor'] != null) {
+      // Handle case where doctor is a nested object with id
+      if (item['doctor'] is Map && item['doctor']['id'] != null) {
+        return item['doctor']['id'] is int
+            ? item['doctor']['id']
+            : int.tryParse(item['doctor']['id'].toString());
+      }
+      // Handle case where doctor is just an ID
+      return item['doctor'] is int
+          ? item['doctor']
+          : int.tryParse(item['doctor'].toString());
+    }
+
+    return null;
+  }
+
+  /// Build share section - either share button or assigned doctor info
+  Widget _buildShareSection(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) {
+    final isAssigned = _isAssignedToDoctor(item);
+
+    if (isAssigned) {
+      return _buildAssignedDoctorInfo(context, ref, item);
+    } else {
+      return _buildShareButton(context, ref, item);
+    }
+  }
+
+  /// Build share button for unassigned monitoring results
+  Widget _buildShareButton(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) {
+    return InkWell(
+      onTap: () => _showShareDialog(context, ref, item),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.share, size: 14, color: AppColors.medicalGreen),
+            const SizedBox(width: 4),
+            Text(
+              'Share',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.medicalGreen,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build assigned doctor info for already assigned monitoring results
+  Widget _buildAssignedDoctorInfo(
+    BuildContext context,
+    WidgetRef ref,
+    Map<String, dynamic> item,
+  ) {
+    // Check if doctor information is available directly from doctor_assignment
+    if (item['doctor_assignment'] != null && item['doctor_assignment'] is Map) {
+      final doctorAssignment =
+          item['doctor_assignment'] as Map<String, dynamic>;
+      final doctorName = doctorAssignment['doctor_name'] ?? 'Dokter';
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppColors.primaryBlue.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: AppColors.primaryBlue.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.local_hospital,
+              size: 14,
+              color: AppColors.primaryBlue,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              doctorName,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.primaryBlue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Fallback: get doctor info from doctor list using doctor ID
+    final doctorId = _getAssignedDoctorId(item);
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final doctorListAsync = ref.watch(doctorListProvider);
+
+        return doctorListAsync.when(
+          loading:
+              () => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primaryBlue,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Loading...',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+          error:
+              (error, stack) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.local_hospital,
+                    size: 14,
+                    color: AppColors.primaryBlue,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Dokter',
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ],
+              ),
+          data: (doctors) {
+            // Find the assigned doctor from the list
+            final assignedDoctor = doctors.firstWhere(
+              (doctor) => doctor['id'] == doctorId,
+              orElse: () => <String, dynamic>{},
+            );
+
+            final doctorName = assignedDoctor['name'] ?? 'Dokter';
+
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.primaryBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: AppColors.primaryBlue.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.local_hospital,
+                    size: 14,
+                    color: AppColors.primaryBlue,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    doctorName,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: AppColors.primaryBlue,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

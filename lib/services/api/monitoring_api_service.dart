@@ -103,16 +103,44 @@ class MonitoringApiService {
     }
   }
 
+  /// Get doctor list - GET /doctor/list
+  Future<List<Map<String, dynamic>>> getDoctorList() async {
+    try {
+      final response = await _apiClient.get('/doctor/list');
+      final data = json.decode(response.body);
+
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data);
+      } else {
+        throw Exception('Invalid response format from server');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   /// Share monitoring to doctor - POST /patient/share_monitoring
   Future<Map<String, dynamic>> shareMonitoringToDoctor({
     required int monitoringId,
     required int doctorId,
   }) async {
-    final response = await _apiClient.post(
-      '/patient/share_monitoring',
-      body: {'monitoring_id': monitoringId, 'doctor_id': doctorId},
-    );
+    try {
+      final response = await _apiClient.post(
+        '/patient/share_monitoring',
+        body: {'monitoring_id': monitoringId, 'doctor_id': doctorId},
+      );
 
-    return json.decode(response.body);
+      print('[MonitoringApiService] Share response body: ${response.body}');
+
+      if (response.body.isEmpty) {
+        // If response body is empty but status is 200, return success
+        return {'success': true, 'message': 'Successfully shared'};
+      }
+
+      return json.decode(response.body);
+    } catch (e) {
+      print('[MonitoringApiService] Share error: $e');
+      rethrow;
+    }
   }
 }
