@@ -16,6 +16,7 @@ import 'package:dopply_app/screens/shared/loading_screen.dart';
 import 'package:dopply_app/screens/shared/error_screen.dart';
 import 'package:dopply_app/screens/monitoring/monitoring_screen.dart';
 import 'package:dopply_app/screens/history/history_screen.dart';
+import 'package:dopply_app/screens/shared/splash_screen.dart';
 
 // Services
 import 'package:dopply_app/core/storage.dart';
@@ -62,9 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Splash screen
       GoRoute(
         path: '/splash',
-        builder:
-            (context, state) =>
-                const LoadingScreen(message: 'Memuat aplikasi...'),
+        builder: (context, state) => const SplashScreen(),
       ),
 
       // Auth routes

@@ -6,10 +6,21 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:dopply_app/services/monitoring_service.dart';
+import 'package:dopply_app/services/ble_service.dart';
 import 'package:dopply_app/models/monitoring.dart';
+import 'package:dopply_app/services/patient_service.dart';
+import 'package:dopply_app/models/patient.dart';
 import 'package:dopply_app/widgets/common/button.dart';
 import 'package:dopply_app/core/theme.dart';
+import 'package:dopply_app/core/api_client.dart';
+import 'package:dopply_app/core/storage.dart';
+
+final fetalDopplerBLEServiceProvider =
+    StateNotifierProvider<FetalDopplerBLEService, BLEConnectionState>(
+      (ref) => FetalDopplerBLEService(),
+    );
 
 class PatientMonitoringScreen extends ConsumerStatefulWidget {
   const PatientMonitoringScreen({super.key});
@@ -22,12 +33,33 @@ class PatientMonitoringScreen extends ConsumerStatefulWidget {
 class _PatientMonitoringScreenState
     extends ConsumerState<PatientMonitoringScreen> {
   bool _isScanning = false;
-  bool _isConnecting = false;
-  List<String> _foundDevices = [];
+  List<BluetoothDevice> _foundDevices = [];
+  String? _selectedPatientId;
+  List<Patient> _patients = [];
+  bool _isLoadingPatients = false;
+  final TextEditingController _addPatientEmailController =
+      TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _setApiTokenFromStorage();
+  }
+
+  Future<void> _setApiTokenFromStorage() async {
+    final token = await StorageService.getToken();
+    if (token != null && token.isNotEmpty) {
+      ApiClient().setAuthToken(token);
+      debugPrint('[MonitoringScreen] JWT token set to ApiClient');
+    } else {
+      debugPrint('[MonitoringScreen] No JWT token found in storage');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final monitoringState = ref.watch(currentMonitoringProvider);
+    final patientService = ref.read(patientServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -40,6 +72,8 @@ class _PatientMonitoringScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildPatientSelector(),
+            _buildAddPatientForm(patientService),
             // Connection Status Card
             _buildConnectionStatusCard(monitoringState),
             const SizedBox(height: 16),
@@ -66,6 +100,125 @@ class _PatientMonitoringScreenState
         ),
       ),
     );
+  }
+
+  Widget _buildPatientSelector() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Pilih Pasien', style: AppTheme.heading3),
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: _fetchPatients,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _isLoadingPatients
+                ? const Center(child: CircularProgressIndicator())
+                : DropdownButtonFormField<String>(
+                  value: _selectedPatientId,
+                  items:
+                      _patients
+                          .map(
+                            (p) => DropdownMenuItem(
+                              value: p.id.toString(),
+                              child: Text(p.name),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedPatientId = val;
+                    });
+                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Pasien',
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddPatientForm(PatientService patientService) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tambah Pasien', style: AppTheme.heading3),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _addPatientEmailController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'Email Pasien',
+              ),
+            ),
+            const SizedBox(height: 8),
+            AppButton(
+              text: 'Tambah',
+              onPressed: () async {
+                final email = _addPatientEmailController.text.trim();
+                if (email.isEmpty) return;
+                final result = await patientService.addPatient(email);
+                final success = result.$1;
+                final errorMsg = result.$2;
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Pasien berhasil ditambahkan'),
+                    ),
+                  );
+                  _addPatientEmailController.clear();
+                  await _fetchPatients();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(errorMsg ?? 'Gagal menambah pasien'),
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _fetchPatients() async {
+    setState(() {
+      _isLoadingPatients = true;
+    });
+    try {
+      final patientService = ref.read(patientServiceProvider);
+      final patients = await patientService.getPatients();
+      setState(() {
+        _patients = patients;
+        if (_patients.isNotEmpty) {
+          _selectedPatientId ??= _patients.first.id.toString();
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengambil data pasien: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoadingPatients = false;
+      });
+    }
   }
 
   Widget _buildConnectionStatusCard(MonitoringState state) {
@@ -224,35 +377,12 @@ class _PatientMonitoringScreenState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (!state.isConnected) ...[
+        if (!state.isConnected)
           AppButton(
-            text: _isScanning ? 'Mencari Perangkat...' : 'Cari Perangkat',
-            onPressed: _isScanning ? null : _scanForDevices,
+            text: _isScanning ? 'Menghubungkan ESP32...' : 'Hubungkan ESP32',
+            onPressed: _isScanning ? null : _connectEsp32,
             isLoading: _isScanning,
           ),
-          if (_foundDevices.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text('Perangkat Ditemukan:', style: AppTheme.heading3),
-            const SizedBox(height: 8),
-            ..._foundDevices
-                .map(
-                  (device) => Card(
-                    child: ListTile(
-                      title: Text(device),
-                      trailing: AppButton(
-                        text: _isConnecting ? 'Menghubungkan...' : 'Hubungkan',
-                        onPressed:
-                            _isConnecting
-                                ? null
-                                : () => _connectToDevice(device),
-                        isLoading: _isConnecting,
-                      ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ],
-        ],
 
         if (state.isConnected && !state.isMonitoring)
           AppButton(text: 'Mulai Monitoring', onPressed: _startMonitoring),
@@ -305,31 +435,46 @@ class _PatientMonitoringScreenState
     );
   }
 
-  Future<void> _scanForDevices() async {
+  Future<void> _connectEsp32() async {
     setState(() {
       _isScanning = true;
-      _foundDevices.clear();
     });
-
     try {
-      final service = ref.read(monitoringServiceProvider);
-      final devices = await service.scanForDopplyDevices();
-
-      setState(() {
-        _foundDevices = devices.map((d) => d.platformName).toList();
+      final bleService = ref.read(fetalDopplerBLEServiceProvider.notifier);
+      await bleService.startScan();
+      StreamSubscription? subscription;
+      bool connected = false;
+      subscription = bleService.deviceListStream.listen((devices) async {
+        BluetoothDevice? esp32Device;
+        try {
+          esp32Device = devices.firstWhere(
+            (d) => d.name.startsWith('Dopply-FetalMonitor'),
+          );
+        } catch (_) {
+          esp32Device = null;
+        }
+        if (esp32Device != null && !connected) {
+          connected = true;
+          await bleService.stopScan();
+          await subscription?.cancel();
+          _connectToDevice(esp32Device);
+        }
       });
-
-      if (_foundDevices.isEmpty) {
+      // Timeout jika tidak ditemukan
+      await Future.delayed(const Duration(seconds: 15));
+      await bleService.stopScan();
+      await subscription.cancel();
+      if (!connected) {
         ref
             .read(currentMonitoringProvider.notifier)
             .setError(
-              'Tidak ada perangkat Dopply ditemukan. Pastikan perangkat sudah dinyalakan dan dalam jangkauan.',
+              'Tidak ada perangkat ESP32 Dopply ditemukan. Pastikan perangkat sudah dinyalakan dan dalam jangkauan.',
             );
       }
     } catch (e) {
       ref
           .read(currentMonitoringProvider.notifier)
-          .setError('Error saat mencari perangkat: $e');
+          .setError('Error saat menghubungkan ESP32: $e');
     } finally {
       setState(() {
         _isScanning = false;
@@ -337,38 +482,48 @@ class _PatientMonitoringScreenState
     }
   }
 
-  Future<void> _connectToDevice(String deviceName) async {
+  Future<void> _connectToDevice(BluetoothDevice device) async {
     setState(() {
-      _isConnecting = true;
+      // Connecting state not used
     });
-
     try {
-      // For demo purposes, we'll simulate connection
-      await Future.delayed(const Duration(seconds: 2));
-      ref.read(currentMonitoringProvider.notifier).setConnected(true);
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Terhubung ke $deviceName')));
+      final bleService = ref.read(fetalDopplerBLEServiceProvider.notifier);
+      final connected = await bleService.connectToDevice(device);
+      if (connected) {
+        ref.read(currentMonitoringProvider.notifier).setConnected(true);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Terhubung ke ${device.name}')));
+      } else {
+        ref
+            .read(currentMonitoringProvider.notifier)
+            .setError('Gagal menghubungkan ke perangkat BLE');
+      }
     } catch (e) {
       ref
           .read(currentMonitoringProvider.notifier)
           .setError('Gagal menghubungkan ke perangkat: $e');
     } finally {
       setState(() {
-        _isConnecting = false;
+        // Connecting state not used
       });
     }
   }
 
   Future<void> _startMonitoring() async {
     try {
+      final bleService = ref.read(fetalDopplerBLEServiceProvider.notifier);
       ref.read(currentMonitoringProvider.notifier).setMonitoring(true);
       ref.read(currentMonitoringProvider.notifier).clearRealTimeData();
-
-      // Start generating mock data for demo
-      _startMockDataGeneration();
-
+      await bleService.startMonitoring();
+      // Listen BPM data
+      bleService.heartRateStream.listen((data) {
+        final dataPoint = BpmDataPoint(
+          timestamp: data.timestamp,
+          bpm: data.bpm,
+        );
+        ref.read(currentMonitoringProvider.notifier).addRealTimeData(dataPoint);
+      });
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Monitoring dimulai')));
@@ -427,8 +582,8 @@ class _PatientMonitoringScreenState
 
   Future<void> _disconnect() async {
     try {
-      final service = ref.read(monitoringServiceProvider);
-      await service.disconnectDevice();
+      final bleService = ref.read(fetalDopplerBLEServiceProvider.notifier);
+      await bleService.disconnect();
 
       ref.read(currentMonitoringProvider.notifier).setConnected(false);
       ref.read(currentMonitoringProvider.notifier).setMonitoring(false);
@@ -448,24 +603,7 @@ class _PatientMonitoringScreenState
     }
   }
 
-  void _startMockDataGeneration() {
-    // Generate mock data for demo purposes
-    Timer.periodic(const Duration(seconds: 1), (timer) {
-      final state = ref.read(currentMonitoringProvider);
-      if (!state.isMonitoring) {
-        timer.cancel();
-        return;
-      }
-
-      // Generate random BPM between 120-160
-      final bpm =
-          120 +
-          (40 * (0.5 + 0.5 * (DateTime.now().millisecond / 1000))).round();
-      final dataPoint = BpmDataPoint(timestamp: DateTime.now(), bpm: bpm);
-
-      ref.read(currentMonitoringProvider.notifier).addRealTimeData(dataPoint);
-    });
-  }
+  // Mock data generation fully removed. Only real BLE data is used.
 
   String _classifyBpm(double averageBpm) {
     if (averageBpm < 110) return 'bradikardia';

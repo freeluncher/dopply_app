@@ -13,9 +13,14 @@ class ApiConfig {
 }
 
 class ApiClient {
+  static final ApiClient _instance = ApiClient._internal();
   final Dio _dio;
 
-  ApiClient() : _dio = Dio() {
+  factory ApiClient() {
+    return _instance;
+  }
+
+  ApiClient._internal() : _dio = Dio() {
     _dio.options.baseUrl = ApiConfig.baseUrl;
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);

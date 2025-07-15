@@ -671,8 +671,7 @@ class FetalDopplerBLEService extends StateNotifier<BLEConnectionState> {
         );
       }
 
-      // Start simulation fallback after 5 seconds if no real data
-      _startSimulationFallback();
+      // Simulation fallback removed. Only real BLE data is used.
 
       print('[BLE] Monitoring started successfully');
     } catch (e) {
@@ -684,8 +683,7 @@ class FetalDopplerBLEService extends StateNotifier<BLEConnectionState> {
         state = BLEConnectionState.monitoring;
       }
 
-      // Start simulation as fallback
-      _startSimulationFallback();
+      // Simulation fallback removed. Only real BLE data is used.
 
       print(
         '[BLE] Continuing monitoring despite command error (ESP32 auto-start)',
@@ -693,53 +691,7 @@ class FetalDopplerBLEService extends StateNotifier<BLEConnectionState> {
     }
   }
 
-  // Start simulation fallback if no real data is received
-  void _startSimulationFallback() {
-    print('[BLE] Starting simulation fallback timer (5 seconds)');
-    _simulationTimer?.cancel();
-    _simulationTimer = Timer(const Duration(seconds: 5), () {
-      if (state == BLEConnectionState.monitoring && !_isSimulatingData) {
-        print('[BLE] No real data received - starting simulation');
-        _isSimulatingData = true;
-        _startDataSimulation();
-      }
-    });
-  }
-
-  // Simulate data for testing when no real device is available
-  void _startDataSimulation() {
-    print('[BLE] Starting data simulation');
-    _simulationTimer?.cancel();
-    _simulationTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
-      if (state != BLEConnectionState.monitoring) {
-        print('[BLE] Stopping simulation - not monitoring');
-        timer.cancel();
-        _isSimulatingData = false;
-        return;
-      }
-
-      // Generate realistic fetal heart rate data
-      final baseBpm = 140;
-      final variation = (DateTime.now().millisecondsSinceEpoch % 20) - 10;
-      final simulatedBpm = baseBpm + variation;
-
-      final heartRateData = FetalHeartRateData(
-        bpm: simulatedBpm,
-        timestamp: DateTime.now(),
-        signalQuality:
-            0.80 + (DateTime.now().millisecondsSinceEpoch % 20) / 100,
-        classification: FetalBPMClassifier.classify(
-          simulatedBpm,
-          _gestationalAge,
-        ),
-      );
-
-      print(
-        '[BLE] Simulated BPM: ${heartRateData.bpm}, Quality: ${heartRateData.signalQuality}',
-      );
-      _heartRateController.add(heartRateData);
-    });
-  }
+  // Simulation/mock BLE data generation removed. Only real BLE data is used.
 
   // Stop monitoring
   Future<void> stopMonitoring() async {

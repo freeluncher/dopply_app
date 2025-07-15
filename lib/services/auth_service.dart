@@ -7,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dopply_app/core/storage.dart';
 import 'package:dopply_app/models/user.dart';
+import 'package:dopply_app/core/api_client.dart';
 
 // Simple HTTP client for auth
 class SimpleHttpClient {
@@ -27,6 +28,13 @@ class SimpleHttpClient {
     Map<String, dynamic> data,
   ) async {
     try {
+      // Ambil token dari storage jika ada
+      final token = await StorageService.getToken();
+      if (token != null && token.isNotEmpty) {
+        _dio.options.headers['Authorization'] = 'Bearer $token';
+      } else {
+        _dio.options.headers.remove('Authorization');
+      }
       final response = await _dio.post(path, data: data);
       return response.data;
     } catch (e) {
@@ -64,6 +72,7 @@ class CurrentUserNotifier extends StateNotifier<User?> {
 
 class AuthService {
   final SimpleHttpClient _httpClient;
+  final ApiClient _apiClient = ApiClient();
 
   AuthService() : _httpClient = SimpleHttpClient();
 
@@ -73,26 +82,38 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final response = await _httpClient.post('/auth/login', {
+      final response = await _httpClient.post('/login', {
         'email': email,
         'password': password,
       });
 
-      if (response['success'] == true) {
-        final userData = response['data'];
-        final user = User.fromJson(userData['user']);
-        final token = userData['token'];
+      // Cek jika ada access_token dan user info di response
+      if (response['access_token'] != null && response['role'] != null) {
+        // Simpan token dan user info
+        final token = response['access_token'];
+        final user = User(
+          id: response['id'] ?? 0,
+          email: response['email'] ?? '',
+          role: response['role'] ?? 'patient',
+          name: response['name'] ?? '',
+        );
 
-        // Store auth data
         await StorageService.saveToken(token);
         await StorageService.saveUserData(jsonEncode(user.toJson()));
         await StorageService.saveUserRole(user.role);
+        // Set token to ApiClient for all requests
+        _apiClient.setAuthToken(token);
 
         return AuthResult.success(user: user, token: token);
       } else {
-        return AuthResult.error(message: response['message'] ?? 'Login gagal');
+        // Log error response
+        print('[LOGIN ERROR] Response: ${response.toString()}');
+        return AuthResult.error(message: 'Login gagal: response tidak valid');
       }
-    } catch (e) {
+    } catch (e, stack) {
+      // Log error and stacktrace
+      print('[LOGIN ERROR] Exception: $e');
+      print('[LOGIN ERROR] Stacktrace: $stack');
       return AuthResult.error(message: 'Terjadi kesalahan: ${e.toString()}');
     }
   }
@@ -105,7 +126,7 @@ class AuthService {
     required String role,
   }) async {
     try {
-      final response = await _httpClient.post('/auth/register', {
+      final response = await _httpClient.post('/register', {
         'name': name,
         'email': email,
         'password': password,

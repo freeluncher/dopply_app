@@ -16,6 +16,9 @@ class LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print(
+      '[LOADING SCREEN] build() called, message: $message, showSpinner: $showSpinner',
+    );
     return Scaffold(
       backgroundColor: Colors.white,
       body: Center(

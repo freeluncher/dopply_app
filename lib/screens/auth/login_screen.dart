@@ -46,6 +46,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       if (!mounted) return;
 
       if (result.isSuccess && result.user != null) {
+        // Set user ke provider agar state global update
+        ref.read(currentUserProvider.notifier).setUser(result.user!);
         final user = result.user!;
         // Navigate based on role
         switch (user.role) {
