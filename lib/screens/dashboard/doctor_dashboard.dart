@@ -27,120 +27,111 @@ class DoctorDashboard extends ConsumerWidget {
                 final authService = ref.read(authServiceProvider);
                 await authService.logout();
                 if (context.mounted) {
-                  context.go('/login');
+                  context.go('/');
                 }
               }
             },
             itemBuilder:
                 (context) => [
-                  const PopupMenuItem(
-                    value: 'logout',
-                    child: Row(
-                      children: [
-                        Icon(Icons.logout, color: Colors.red),
-                        SizedBox(width: 8),
-                        Text('Logout'),
-                      ],
-                    ),
-                  ),
+                  const PopupMenuItem(value: 'logout', child: Text('Logout')),
                 ],
           ),
         ],
       ),
-      body: SingleChildScrollView(
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Welcome Card
-            _buildWelcomeCard(),
-            const SizedBox(height: 24),
-
-            // Available Features
-            Text('Fitur Tersedia', style: AppTheme.heading2),
-            const SizedBox(height: 16),
-
-            _buildAvailableFeaturesGrid(context),
-
-            const SizedBox(height: 24),
-
-            // Coming Soon Features
-            _buildComingSoonSection(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWelcomeCard() {
-    return Card(
-      elevation: 4,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20.0),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [
-              AppTheme.primaryColor,
-              AppTheme.primaryColor.withOpacity(0.8),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text('Selamat Datang, Dokter', style: AppTheme.heading2),
+              const SizedBox(height: 16),
+              Text(
+                'Pilih fitur yang ingin digunakan:',
+                style: AppTheme.bodyText,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _buildFeatureCard(
+                      icon: Icons.monitor_heart,
+                      title: 'Monitoring',
+                      subtitle: 'Pantau kondisi pasien\nsecara real-time',
+                      color: Colors.green,
+                      isAvailable: true,
+                      onTap: () => context.go('/monitoring'),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: _buildFeatureCard(
+                      icon: Icons.history,
+                      title: 'Riwayat Monitoring',
+                      subtitle: 'Lihat data monitoring\nsebelumnya',
+                      color: Colors.blue,
+                      isAvailable: true,
+                      onTap: () => context.go('/history'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: _buildFeatureCard(
+                      icon: Icons.notifications,
+                      title: 'Notifikasi',
+                      subtitle: 'Pemberitahuan penting\nuntuk dokter',
+                      color: Colors.orange,
+                      isAvailable: false,
+                      onTap: () => context.go('/notifications'),
+                    ),
+                  ),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: _buildFeatureCard(
+                      icon: Icons.settings,
+                      title: 'Pengaturan',
+                      subtitle: 'Atur profil dan preferensi\ndokter',
+                      color: Colors.purple,
+                      isAvailable: true,
+                      onTap: () => context.go('/settings'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              Text(
+                'Fitur Akan Segera Hadir',
+                style: AppTheme.heading3.copyWith(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Fitur lanjutan yang sedang dalam pengembangan:',
+                style: AppTheme.caption,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              // Coming Soon Features List
+              _buildComingSoonItem(
+                title: 'Telemedicine',
+                subtitle: 'Konsultasi jarak jauh dengan pasien',
+                isAvailable: false,
+              ),
+              _buildComingSoonItem(
+                title: 'Integrasi Lab',
+                subtitle: 'Hasil lab otomatis masuk ke sistem',
+                isAvailable: false,
+              ),
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.local_hospital, color: Colors.white, size: 32),
-            const SizedBox(height: 8),
-            const Text(
-              'Selamat Datang, Dokter',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Mulai monitoring fetal untuk pasien Anda',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
       ),
-    );
-  }
-
-  Widget _buildAvailableFeaturesGrid(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        _buildFeatureCard(
-          icon: Icons.monitor_heart,
-          title: 'Monitoring Fetal',
-          subtitle: 'Mulai monitoring\nfetal real-time',
-          color: Colors.red,
-          isAvailable: true,
-          onTap: () => context.go('/monitoring'),
-        ),
-        _buildFeatureCard(
-          icon: Icons.history,
-          title: 'Riwayat Monitoring',
-          subtitle: 'Lihat data monitoring\nsebelumnya',
-          color: Colors.blue,
-          isAvailable: true,
-          onTap: () => context.go('/history'),
-        ),
-      ],
     );
   }
 
@@ -225,106 +216,51 @@ class DoctorDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildComingSoonSection() {
+  Widget _buildComingSoonItem({
+    required String title,
+    required String subtitle,
+    required bool isAvailable,
+  }) {
     return Card(
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             Icon(Icons.construction, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'Fitur Akan Segera Hadir',
-              style: AppTheme.heading3.copyWith(color: Colors.grey[600]),
+              title,
+              style: AppTheme.heading3.copyWith(
+                color: isAvailable ? null : Colors.grey,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Fitur lanjutan yang sedang dalam pengembangan:',
-              style: AppTheme.caption,
-              textAlign: TextAlign.center,
+              subtitle,
+              style: AppTheme.caption.copyWith(color: Colors.grey[500]),
             ),
-            const SizedBox(height: 16),
-
-            // Coming Soon Features List
-            _buildComingSoonItem(
-              icon: Icons.people,
-              title: 'Manajemen Pasien',
-              subtitle: 'Kelola data pasien dan assignment',
-            ),
-            _buildComingSoonItem(
-              icon: Icons.person_add,
-              title: 'Tambah Pasien',
-              subtitle: 'Daftarkan pasien baru ke sistem',
-            ),
-            _buildComingSoonItem(
-              icon: Icons.notifications,
-              title: 'Notifikasi',
-              subtitle: 'Terima alert dari pasien',
-            ),
-            _buildComingSoonItem(
-              icon: Icons.analytics,
-              title: 'Analytics Dashboard',
-              subtitle: 'Analisis data monitoring pasien',
-            ),
-
-            const SizedBox(height: 16),
-            Text(
-              'Saat ini, silakan gunakan fitur monitoring fetal yang sudah tersedia untuk memulai diagnosis.',
-              style: AppTheme.bodyText.copyWith(fontWeight: FontWeight.w500),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildComingSoonItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey[400], size: 24),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTheme.bodyText.copyWith(
-                    color: Colors.grey[600],
+            if (!isAvailable) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'Segera',
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Text(
-                  subtitle,
-                  style: AppTheme.caption.copyWith(color: Colors.grey[500]),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              'Segera',
-              style: TextStyle(
-                color: Colors.orange,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
               ),
-            ),
-          ),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
