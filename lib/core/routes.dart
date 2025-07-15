@@ -26,38 +26,31 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     redirect: (context, state) async {
-      // Check if user is logged in
       final isLoggedIn = await StorageService.isLoggedIn();
       final currentLocation = state.fullPath ?? '/';
 
+      // List of protected routes
+      final protectedRoutes = [
+        '/patient',
+        '/doctor',
+        '/admin',
+        '/monitoring',
+        '/history',
+        '/patients',
+        '/add-patient',
+        '/notifications',
+        '/verify-doctors',
+        '/system-overview',
+      ];
+
       // If not logged in and trying to access protected routes
       if (!isLoggedIn &&
-          !currentLocation.startsWith('/login') &&
-          !currentLocation.startsWith('/register') &&
-          !currentLocation.startsWith('/splash')) {
+          protectedRoutes.any((r) => currentLocation.startsWith(r))) {
         return '/login';
       }
 
-      // If logged in and trying to access auth routes
-      if (isLoggedIn &&
-          (currentLocation.startsWith('/login') ||
-              currentLocation.startsWith('/register') ||
-              currentLocation.startsWith('/splash'))) {
-        // Get user role and redirect to appropriate dashboard
-        final userRole = await StorageService.getUserRole();
-        switch (userRole) {
-          case 'patient':
-            return '/patient';
-          case 'doctor':
-            return '/doctor';
-          case 'admin':
-            return '/admin';
-          default:
-            return '/patient';
-        }
-      }
-
-      return null; // No redirect needed
+      // Semua user bisa akses /login, /register, /splash tanpa redirect
+      return null;
     },
     routes: [
       // Splash screen
@@ -96,7 +89,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // History routes
       GoRoute(
         path: '/history',
-        builder: (context, state) => const MonitoringHistoryScreen(),
+        builder: (context, state) => const HistoryScreen(),
       ),
 
       // Doctor-specific routes
