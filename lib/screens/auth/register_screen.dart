@@ -66,16 +66,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         password: _passwordController.text,
         role: _selectedRole,
       );
+      debugPrint(
+        '[REGISTER] result: isSuccess=${result.isSuccess}, errorMessage=${result.errorMessage}',
+      );
 
       if (result.isSuccess) {
         _showSnackBar('Registrasi berhasil!');
         if (mounted) {
+          await Future.delayed(const Duration(milliseconds: 1200));
           context.go('/login');
         }
       } else {
         _showSnackBar(result.errorMessage ?? 'Registrasi gagal', isError: true);
       }
     } catch (e) {
+      debugPrint('[REGISTER] Exception: $e');
       _showSnackBar('Terjadi kesalahan: $e', isError: true);
     } finally {
       if (mounted) {

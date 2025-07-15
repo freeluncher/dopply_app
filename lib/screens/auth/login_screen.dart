@@ -209,7 +209,43 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ),
                     ),
                     GestureDetector(
-                      onTap: () => context.go('/register'),
+                      onTap: () {
+                        debugPrint('[LOGIN] Teks Daftar ditekan');
+                        debugPrint(
+                          '[LOGIN] Current route: ' +
+                              GoRouter.of(context).location,
+                        );
+                        try {
+                          final navigator = Navigator.of(context);
+                          final parentNavigator = Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          );
+                          debugPrint('[LOGIN] Navigator: $navigator');
+                          debugPrint(
+                            '[LOGIN] Parent Navigator: $parentNavigator',
+                          );
+                          debugPrint(
+                            '[LOGIN] Widget tree: ' + context.widget.toString(),
+                          );
+                          context.push('/register');
+                          debugPrint(
+                            '[LOGIN] context.push(/register) dipanggil',
+                          );
+                        } catch (e) {
+                          debugPrint(
+                            '[LOGIN] ERROR saat navigasi ke /register: ' +
+                                e.toString(),
+                          );
+                        }
+                        Future.delayed(const Duration(milliseconds: 500), () {
+                          debugPrint(
+                            '[LOGIN] Setelah navigasi, route: ' +
+                                GoRouter.of(context).location,
+                          );
+                          debugPrint('[LOGIN] Mounted: $mounted');
+                        });
+                      },
                       child: Text(
                         'Daftar',
                         style: AppTheme.bodyText.copyWith(
