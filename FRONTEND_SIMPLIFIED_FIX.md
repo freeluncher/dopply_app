@@ -120,7 +120,7 @@ frontend/
 ### Base Configuration
 ```dart
 class ApiConfig {
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = 'https://dopply.my.id/api/v1';
   static const Map<String, String> headers = {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer {token}' // From secure storage

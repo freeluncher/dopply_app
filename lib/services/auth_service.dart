@@ -13,8 +13,7 @@ class SimpleHttpClient {
   final Dio _dio;
 
   SimpleHttpClient() : _dio = Dio() {
-    _dio.options.baseUrl =
-        'https://api.dopply.com'; // Replace with actual API base URL
+    _dio.options.baseUrl = 'https://dopply.my.id/api/v1'; // Dopply API base URL
     _dio.options.connectTimeout = const Duration(seconds: 30);
     _dio.options.receiveTimeout = const Duration(seconds: 30);
     _dio.options.headers = {
