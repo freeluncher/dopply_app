@@ -1,7 +1,11 @@
+// =============================================================================
+// Main App Entry Point - Simplified with Routing and Theme
+// =============================================================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'app/router.dart';
-import 'app/theme.dart'; // Import tema medical
+import 'core/routes.dart';
+import 'core/theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,24 +18,22 @@ void main() {
     print(stack);
     return true;
   };
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(const ProviderScope(child: DopplyApp()));
 }
 
-class MyApp extends ConsumerWidget {
-  const MyApp({Key? key}) : super(key: key);
+class DopplyApp extends ConsumerWidget {
+  const DopplyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+
     return MaterialApp.router(
       routerConfig: router,
-      title: 'Dopply - Medical Monitoring App',
-      // Aplikasi tema medical yang menunjukkan profesionalitas dan integritas
+      title: 'Dopply - Fetal Monitoring App',
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light, // Default ke light theme
-      debugShowCheckedModeBanner:
-          false, // Hilangkan banner debug untuk tampilan lebih bersih
+      themeMode: ThemeMode.light,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
