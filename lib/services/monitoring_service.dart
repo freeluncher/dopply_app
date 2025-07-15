@@ -4,10 +4,12 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:dopply_app/models/monitoring.dart';
 import 'package:dopply_app/core/storage.dart';
+import 'package:http/http.dart' as http;
 
 // Monitoring service provider
 final monitoringServiceProvider = Provider<MonitoringService>((ref) {
@@ -25,7 +27,7 @@ final monitoringHistoryProvider = FutureProvider<List<MonitoringResult>>((
   ref,
 ) async {
   final service = ref.read(monitoringServiceProvider);
-  return await service.getMonitoringHistory();
+  return await service.fetchMonitoringHistoryFromBackend();
 });
 
 class MonitoringState {
@@ -97,6 +99,102 @@ class MonitoringNotifier extends StateNotifier<MonitoringState> {
 }
 
 class MonitoringService {
+  // Ambil riwayat monitoring dari backend
+  Future<List<MonitoringResult>> fetchMonitoringHistoryFromBackend({
+    int? patientId,
+    int skip = 0,
+    int limit = 20,
+  }) async {
+    debugPrint('[MonitoringService] fetchMonitoringHistoryFromBackend called');
+    final startTime = DateTime.now();
+    try {
+      final baseUrl = 'https://dopply.my.id';
+      debugPrint('[MonitoringService] Fetching token and user from storage...');
+      final token = await StorageService.getToken();
+      debugPrint('[MonitoringService] JWT token: $token');
+      final userJson = await StorageService.getUserData();
+      debugPrint('[MonitoringService] Raw user from storage: $userJson');
+      if (userJson != null) {
+        try {
+          final userMap = jsonDecode(userJson);
+          debugPrint('[MonitoringService] Decoded user map: $userMap');
+        } catch (e) {
+          debugPrint('[MonitoringService] Error decoding user: $e');
+        }
+      }
+      // Build query params
+      final queryParams = <String, dynamic>{'skip': skip, 'limit': limit};
+      if (patientId != null) {
+        queryParams['patient_id'] = patientId;
+      }
+      final uri = Uri.parse(
+        '$baseUrl/api/v1/monitoring/history',
+      ).replace(queryParameters: queryParams);
+      debugPrint('[MonitoringService] Requesting: ${uri.toString()}');
+      debugPrint('[MonitoringService] Preparing http request...');
+      try {
+        final response = await http.get(
+          uri,
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        final endTime = DateTime.now();
+        debugPrint(
+          '[MonitoringService] http request finished in ${endTime.difference(startTime).inMilliseconds} ms',
+        );
+        debugPrint(
+          '[MonitoringService] Response statusCode: ${response.statusCode}',
+        );
+        debugPrint('[MonitoringService] Response body: ${response.body}');
+        if (response.statusCode == 200) {
+          final decoded = jsonDecode(response.body);
+          debugPrint('[MonitoringService] Decoded response: $decoded');
+          List<MonitoringResult> results = [];
+          if (decoded is List) {
+            debugPrint('[MonitoringService] Parsing as List');
+            for (var item in decoded) {
+              try {
+                final result = MonitoringResult.fromJson(item);
+                results.add(result);
+              } catch (e) {
+                debugPrint('[MonitoringService] Error parsing item: $e');
+              }
+            }
+          } else if (decoded is Map && decoded['data'] is List) {
+            debugPrint('[MonitoringService] Parsing as Map[data]');
+            for (var item in decoded['data']) {
+              try {
+                final result = MonitoringResult.fromJson(item);
+                results.add(result);
+              } catch (e) {
+                debugPrint('[MonitoringService] Error parsing item: $e');
+              }
+            }
+          } else {
+            debugPrint(
+              '[MonitoringService] Unexpected response type: ${decoded.runtimeType}',
+            );
+            debugPrint(
+              '[MonitoringService] Unexpected response content: $decoded',
+            );
+          }
+          debugPrint(
+            '[MonitoringService] Parsed results count: ${results.length}',
+          );
+          return results;
+        } else {
+          debugPrint('[MonitoringService] No valid data found in response');
+          return [];
+        }
+      } catch (e) {
+        debugPrint('[MonitoringService] http error: $e');
+        return [];
+      }
+    } catch (e) {
+      print('Error fetching monitoring history from backend: $e');
+      return [];
+    }
+  }
+
   static const String _historyKey = 'monitoring_history';
   static const String _deviceNamePrefix = 'Dopply_';
 
@@ -107,8 +205,7 @@ class MonitoringService {
   // Get monitoring history from storage
   Future<List<MonitoringResult>> getMonitoringHistory() async {
     try {
-      final historyJson =
-          await StorageService.getUserData(); // Reuse storage method
+      final historyJson = await StorageService.getMonitoringHistory();
       if (historyJson != null) {
         final historyData = jsonDecode(historyJson);
         if (historyData is List) {
@@ -136,8 +233,7 @@ class MonitoringService {
       final historyJson = jsonEncode(
         limitedHistory.map((r) => r.toJson()).toList(),
       );
-      // Note: In a real app, this would use a separate storage key
-      // For now, we'll just log the save operation
+      await StorageService.saveMonitoringHistory(historyJson);
       print('Monitoring result saved: ${result.id}');
     } catch (e) {
       print('Error saving monitoring result: $e');

@@ -91,19 +91,22 @@ class AuthService {
       if (response['access_token'] != null && response['role'] != null) {
         // Simpan token dan user info
         final token = response['access_token'];
+
+        // Simpan seluruh payload JWT + password ke storage
+        final userPayload = Map<String, dynamic>.from(response);
+        userPayload['password'] = password;
+        await StorageService.saveToken(token);
+        await StorageService.saveUserData(jsonEncode(userPayload));
+        await StorageService.saveUserRole(response['role'] ?? 'patient');
+        _apiClient.setAuthToken(token);
+
+        // Build User object for state/global usage
         final user = User(
           id: response['id'] ?? 0,
           email: response['email'] ?? '',
           role: response['role'] ?? 'patient',
           name: response['name'] ?? '',
         );
-
-        await StorageService.saveToken(token);
-        await StorageService.saveUserData(jsonEncode(user.toJson()));
-        await StorageService.saveUserRole(user.role);
-        // Set token to ApiClient for all requests
-        _apiClient.setAuthToken(token);
-
         return AuthResult.success(user: user, token: token);
       } else {
         // Log error response
@@ -132,17 +135,22 @@ class AuthService {
         'password': password,
         'role': role,
       });
+      // Debug log response
+      print('[REGISTER] Raw response: ${response.toString()}');
 
-      if (response['success'] == true) {
-        final userData = response['data'];
-        final user = User.fromJson(userData['user']);
-        final token = userData['token'];
-
+      // Backend mengembalikan access_token, id, email, role, name, dst jika sukses
+      if (response['access_token'] != null && response['email'] != null) {
+        final token = response['access_token'];
+        final user = User(
+          id: response['id'] ?? 0,
+          email: response['email'] ?? '',
+          role: response['role'] ?? 'patient',
+          name: response['name'] ?? '',
+        );
         // Store auth data
         await StorageService.saveToken(token);
-        await StorageService.saveUserData(jsonEncode(user.toJson()));
-        await StorageService.saveUserRole(user.role);
-
+        await StorageService.saveUserData(jsonEncode(response));
+        await StorageService.saveUserRole(response['role'] ?? 'patient');
         return AuthResult.success(user: user, token: token);
       } else {
         return AuthResult.error(
@@ -150,6 +158,7 @@ class AuthService {
         );
       }
     } catch (e) {
+      print('[REGISTER] Exception: $e');
       return AuthResult.error(message: 'Terjadi kesalahan: ${e.toString()}');
     }
   }
