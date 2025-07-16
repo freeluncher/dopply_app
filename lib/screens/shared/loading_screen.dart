@@ -29,11 +29,11 @@ class LoadingScreen extends StatelessWidget {
             Container(
               width: 100,
               height: 100,
-              decoration: const BoxDecoration(
-                color: Colors.blue,
-                shape: BoxShape.circle,
+              decoration: const BoxDecoration(shape: BoxShape.circle),
+              child: Image.asset(
+                'assets/images/icon-dopply-transparent.png',
+                fit: BoxFit.contain,
               ),
-              child: const Icon(Icons.favorite, color: Colors.white, size: 50),
             ),
             const SizedBox(height: 32),
 

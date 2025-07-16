@@ -10,6 +10,29 @@ final patientServiceProvider = Provider<PatientService>((ref) {
 });
 
 class PatientService {
+  // Fetch single patient profile by ID
+  Future<Patient?> getPatientProfile(int patientId) async {
+    print('[PatientService] Fetching patient profile for ID: $patientId');
+    try {
+      final response = await _apiClient.dio.get('/api/v1/patient/$patientId');
+      print(
+        '[PatientService] Profile response: \\${response.statusCode} \\${response.data}',
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        return Patient.fromJson(response.data);
+      } else {
+        print(
+          '[PatientService] Failed to fetch patient profile: status \\${response.statusCode}',
+        );
+        return null;
+      }
+    } catch (e, st) {
+      print('[PatientService] Error fetching patient profile: $e');
+      print(st);
+      return null;
+    }
+  }
+
   // Get monitoring classification only, do not save to DB
   Future<Map<String, dynamic>?> getMonitoringClassification(
     int gestationalAge,

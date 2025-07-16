@@ -172,6 +172,10 @@ class AuthService {
       print('Logout API call failed: $e');
     } finally {
       await StorageService.clearAll();
+      // Redirect ke halaman login setelah logout
+      // Pastikan context tersedia saat pemanggilan
+      // Gunakan navigator jika dipanggil dari widget
+      // Contoh: context.go('/login');
     }
   }
 
