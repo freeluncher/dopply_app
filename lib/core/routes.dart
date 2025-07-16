@@ -17,6 +17,7 @@ import 'package:dopply_app/screens/shared/error_screen.dart';
 import 'package:dopply_app/screens/monitoring/monitoring_screen.dart';
 import 'package:dopply_app/screens/history/history_screen.dart';
 import 'package:dopply_app/screens/shared/splash_screen.dart';
+import 'package:dopply_app/screens/profile/edit_profile_screen.dart';
 
 // Services
 import 'package:dopply_app/core/storage.dart';
@@ -135,6 +136,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               showRetryButton: false,
             ),
       ),
+
+      // Edit profile route
+      GoRoute(
+        path: '/edit_profile',
+        builder: (context, state) => const EditProfileScreen(),
+      ),
     ],
     errorBuilder:
         (context, state) => ErrorScreen(
@@ -177,4 +184,6 @@ class AppNavigation {
       context.go('/verify-doctors');
   static void toSystemOverview(BuildContext context) =>
       context.go('/system-overview');
+  static void toEditProfile(BuildContext context) =>
+      context.go('/edit_profile');
 }
