@@ -1,6 +1,9 @@
+// import 'package:dopply_app/screens/select_monitoring_result_screen.dart'; // Tidak dipakai
 import 'package:flutter/material.dart';
 import 'package:dopply_app/core/api_client.dart';
 import 'package:dopply_app/models/patient.dart';
+import 'package:dopply_app/core/storage.dart';
+import 'package:dopply_app/services/share_monitoring_service.dart';
 
 class ShareDoctorScreen extends StatefulWidget {
   const ShareDoctorScreen({Key? key}) : super(key: key);
@@ -26,12 +29,12 @@ class _ShareDoctorScreenState extends State<ShareDoctorScreen> {
       _error = null;
     });
     try {
-      final dioResponse = await ApiClient().dio.get('/api/v1/user/all-doctors');
+      final dioResponse = await ApiClient().dio.get('/user/all-doctors');
       final data = dioResponse.data;
-      if (data != null && data is List) {
+      if (data != null && data is Map && data['doctors'] is List) {
         setState(() {
           _doctors =
-              data.map<Patient>((item) {
+              (data['doctors'] as List).map<Patient>((item) {
                 return Patient(
                   id: item['id'],
                   name: item['name'] ?? '',
@@ -73,11 +76,50 @@ class _ShareDoctorScreenState extends State<ShareDoctorScreen> {
                     leading: const Icon(Icons.person),
                     title: Text(doctor.name),
                     subtitle: Text(doctor.email),
-                    onTap: () {
-                      // TODO: Implementasi share hasil monitoring ke dokter ini
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Pilih dokter: ${doctor.name}')),
-                      );
+                    onTap: () async {
+                      // Ambil token dan lakukan share ke dokter
+                      final jwt = await StorageService.getToken() ?? '';
+                      // Ambil monitoring result dari argumen route jika ada
+                      final args = ModalRoute.of(context)?.settings.arguments;
+                      int? recordId;
+                      String notes = '';
+                      if (args is Map && args.containsKey('recordId')) {
+                        recordId = args['recordId'] as int?;
+                        notes = args['notes'] as String? ?? '';
+                      }
+                      if (recordId != null) {
+                        final success =
+                            await ShareMonitoringService.shareMonitoring(
+                              jwt: jwt,
+                              recordId: recordId,
+                              doctorId: doctor.id,
+                              notes: notes,
+                            );
+                        if (success) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Berhasil share hasil monitoring ke dokter',
+                                ),
+                              ),
+                            );
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Gagal share hasil monitoring!'),
+                              ),
+                            );
+                          }
+                        }
+                        // Kembali ke layar sebelumnya setelah share
+                        Navigator.pop(context, doctor);
+                      } else {
+                        // Jika tidak ada recordId, hanya pilih dokter
+                        Navigator.pop(context, doctor);
+                      }
                     },
                   );
                 },

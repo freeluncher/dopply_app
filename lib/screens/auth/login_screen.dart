@@ -101,20 +101,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.primaryColor,
-                              AppTheme.primaryDark,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(
-                          Icons.monitor_heart,
-                          color: Colors.white,
-                          size: 40,
+                        child: Image.asset(
+                          'assets/images/icon-dopply-transparent.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: 24),

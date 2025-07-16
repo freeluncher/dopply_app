@@ -7,6 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dopply_app/core/theme.dart';
 import 'package:dopply_app/services/auth_service.dart';
+import 'package:dopply_app/screens/share_doctor_screen.dart';
+import 'package:dopply_app/models/patient.dart';
+import 'package:dopply_app/services/share_monitoring_service.dart';
 
 class PatientDashboard extends ConsumerWidget {
   const PatientDashboard({super.key});
@@ -222,20 +225,12 @@ class PatientDashboard extends ConsumerWidget {
           onTap: () => context.go('/history'),
         ),
         _buildFeatureCard(
-          icon: Icons.share,
-          title: 'Share ke Dokter',
-          subtitle: 'Kirim hasil monitoring\nke dokter',
-          color: Colors.green,
-          isAvailable: false,
-          onTap: () => context.go('/share-doctor'),
-        ),
-        _buildFeatureCard(
           icon: Icons.person,
-          title: 'Profile',
-          subtitle: 'Lihat dan edit\nprofile pribadi',
+          title: 'Edit Biodata',
+          subtitle: 'Ubah data diri\n& catatan medis',
           color: Colors.purple,
-          isAvailable: false,
-          onTap: () => context.go('/profile'),
+          isAvailable: true,
+          onTap: () => context.go('/edit_profile'),
         ),
       ],
     );
